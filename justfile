@@ -20,4 +20,4 @@ build:
     cd packages/node && pnpm run build
 
 test *args: build
-    node {{harnessmd}} --input tests/adhoc --language typescript "node_modules/.bin/vitest run --config tests/vitest.config.ts --root . {{args}}"
+    node {{harnessmd}} --input tests --language typescript "node_modules/.bin/vitest run --config tests/vitest.config.ts --root . {{args}}"
