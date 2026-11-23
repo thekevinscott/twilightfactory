@@ -12,3 +12,4 @@ pnpm-lock.yaml
 # Beads issue tracker (local only)
 .beads/
 AGENTS.md
+.harnessmd/

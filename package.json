@@ -1,5 +1,5 @@
 {
-  "name": "twilightfactory-tests",
+  "name": "twilightfactory",
   "private": true,
   "type": "module",
   "devDependencies": {
