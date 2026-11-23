@@ -92,7 +92,7 @@ const STATUS = (notRun: string) => `
 export const QUERIES = {
   events: "SELECT id, time, kind, head, detail FROM events ORDER BY id DESC LIMIT 50",
   actionRuns: `SELECT id, action, reason, head, started, ended, exit_code, error, log,
-    ${STATUS("failed")} FROM action_runs ORDER BY id DESC LIMIT 50`,
+    ${STATUS("failed")} FROM action_runs ORDER BY started DESC, id DESC LIMIT 50`,
   agents: `SELECT id, prompt, worktree, branch, base, started, ended, exit_code, error, output,
     ${STATUS("not run")} FROM agent_runs ORDER BY id DESC LIMIT 50`,
   lastHead:
