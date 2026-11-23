@@ -1,7 +1,7 @@
 headings = ["test"]
 
 [out]
-typescript = ".harnessmd/{test}.test.ts"
+typescript = ".harnessmd/{file}/{test}.test.ts"
 
 [cli]
 typescript = ["node", "{root}/packages/node/dist/cli.js"]
