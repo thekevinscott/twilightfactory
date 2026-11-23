@@ -6,6 +6,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
+    "tf": "dist/cli.js",
     "twilightfactory": "dist/cli.js"
   },
   "engines": {

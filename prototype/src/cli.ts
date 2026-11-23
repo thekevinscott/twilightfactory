@@ -16,7 +16,7 @@ async function attached<T>(work: (client: Client) => Promise<T>): Promise<T> {
   }
 }
 
-const program = new Command("twilightfactory").description(
+const program = new Command("tf").description(
   "Watch this repo's default branch, run actions on new commits, start local agents.",
 );
 
@@ -27,13 +27,10 @@ program
     await serveDaemon(await repoRoot(process.cwd()));
   });
 
-program
-  .command("tui")
-  .description("open the TUI, starting the daemon if needed")
-  .action(async () => {
-    const { runTui } = await import("./tui.js");
-    await attached(runTui);
-  });
+program.action(async () => {
+  const { runTui } = await import("./tui.js");
+  await attached(runTui);
+});
 
 program
   .command("status")

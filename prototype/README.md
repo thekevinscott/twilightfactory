@@ -19,27 +19,27 @@ Every command acts on the git repo in the current directory. Run the built
 file with node from inside the target repo:
 
 ```
-node /path/to/twilightfactory/prototype/dist/cli.js tui
+node /path/to/twilightfactory/prototype/dist/cli.js
 ```
 
-`pnpm --dir prototype exec twilightfactory` does not work: pnpm does not link
+`pnpm --dir prototype exec tf` does not work: pnpm does not link
 a package's own bin, and `--dir` would change the directory away from the
 target repo. A fish alias covers it:
 
 ```
-alias twilightfactory "node /path/to/twilightfactory/prototype/dist/cli.js"
+alias tf "node /path/to/twilightfactory/prototype/dist/cli.js"
 ```
 
 Commands:
 
 ```
-twilightfactory daemon           run the daemon in the foreground
-twilightfactory tui              open the TUI
-twilightfactory status           print the same summary as text
-twilightfactory run <action>     run a configured action now, prints the run id
-twilightfactory log <run id>     print an action run's output
-twilightfactory agent "<prompt>" create an agent worktree
-twilightfactory stop             stop the daemon
+tf daemon           run the daemon in the foreground
+tf                  open the TUI
+tf status           print the same summary as text
+tf run <action>     run a configured action now, prints the run id
+tf log <run id>     print an action run's output
+tf agent "<prompt>" create an agent worktree
+tf stop             stop the daemon
 ```
 
 All but `daemon` and `stop` find the daemon for the repo and start one in the
@@ -106,12 +106,12 @@ printf 'poll_seconds = 2\n\n[[action]]\nname = "date"\ncommand = "date"\non = ["
 git add twilightfactory.toml
 git commit -m first
 git push origin main
-twilightfactory status
+tf status
 git commit --allow-empty -m second
 git push origin main
-twilightfactory status
-twilightfactory tui
-twilightfactory stop
+tf status
+tf
+tf stop
 ```
 
 The second `status` shows a `head` event, `date` passed and `fail` failed.
