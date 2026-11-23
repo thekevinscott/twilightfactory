@@ -8,7 +8,7 @@ default:
 
 install:
     cd packages/node && pnpm install
-    cd tests/typescript && pnpm install
+    cd tests && pnpm install
 
 lint:
     cd packages/node && pnpm run lint
@@ -20,4 +20,4 @@ build:
     cd packages/node && pnpm run build
 
 test *args: build
-    node {{harnessmd}} --input tests/adhoc --language typescript "tests/typescript/node_modules/.bin/vitest run --root tests/typescript {{args}}"
+    node {{harnessmd}} --input tests/adhoc --language typescript "tests/node_modules/.bin/vitest run --root tests {{args}}"
