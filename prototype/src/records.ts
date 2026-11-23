@@ -51,6 +51,16 @@ const AGENT_RUNS = [
   "output TEXT",
 ];
 
+const WORKFLOW_RUNS = [
+  "id TEXT PRIMARY KEY",
+  "name TEXT",
+  "status TEXT",
+  "conclusion TEXT",
+  "head TEXT",
+  "url TEXT",
+  "created TEXT",
+];
+
 function table(root: string, name: string, columns: string[], glob: string): TableDef {
   const names = columns.map((column) => column.split(" ")[0] as string);
   return {
@@ -76,6 +86,7 @@ export function openTables(root: string): DirSQL {
       table(root, "events", EVENTS, "events/*.json"),
       table(root, "action_runs", ACTION_RUNS, "actions/*/run.json"),
       table(root, "agent_runs", AGENT_RUNS, "agents/*/run.json"),
+      table(root, "workflow_runs", WORKFLOW_RUNS, "workflows/*.json"),
     ],
     noIgnore: true,
   });
@@ -95,6 +106,7 @@ export const QUERIES = {
     ${STATUS("failed")} FROM action_runs ORDER BY started DESC, id DESC LIMIT 50`,
   agents: `SELECT id, prompt, worktree, branch, base, started, ended, exit_code, error, output,
     ${STATUS("not run")} FROM agent_runs ORDER BY id DESC LIMIT 50`,
+  workflows: "SELECT id, name, status, conclusion, head, url, created FROM workflow_runs ORDER BY name",
   lastHead:
     "SELECT head FROM events WHERE kind IN ('head', 'watching') ORDER BY id DESC LIMIT 1",
   unfinishedActions: "SELECT id FROM action_runs WHERE ended IS NULL",

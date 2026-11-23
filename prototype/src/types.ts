@@ -35,6 +35,16 @@ export interface AgentRun {
   status: string;
 }
 
+export interface WorkflowRun {
+  id: string;
+  name: string;
+  status: string;
+  conclusion: string | null;
+  head: string;
+  url: string;
+  created: string;
+}
+
 export interface Snapshot {
   repo: string;
   root: string;
@@ -49,6 +59,8 @@ export interface Snapshot {
   events: EventRow[];
   action_runs: ActionRun[];
   agents: AgentRun[];
+  workflows: WorkflowRun[];
+  workflows_note: string | null;
 }
 
 export interface Reply {

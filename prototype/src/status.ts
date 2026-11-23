@@ -1,4 +1,4 @@
-import type { ActionRun, AgentRun, EventRow, Snapshot } from "./types.js";
+import type { ActionRun, AgentRun, EventRow, Snapshot, WorkflowRun } from "./types.js";
 
 function short(head: string | null): string {
   return head ? head.slice(0, 7) : "-------";
@@ -27,6 +27,23 @@ export function agentLine(run: AgentRun): string {
   return `${clock(run.started)}  ${run.status.padEnd(7)} ${run.worktree}  ${run.prompt.split("\n")[0]?.slice(0, 40) ?? ""}`;
 }
 
+const NOT_FAILED = ["success", "skipped", "neutral", "cancelled"];
+
+function failed(run: WorkflowRun): boolean {
+  return run.conclusion !== null && !NOT_FAILED.includes(run.conclusion);
+}
+
+export function workflowLine(run: WorkflowRun): string {
+  const mark = failed(run) ? "FAILED " : "";
+  return `${mark}${run.name}  ${run.conclusion ?? run.status}  ${short(run.head)}  ${clock(run.created)}  ${run.url}`;
+}
+
+function workflowLines(state: Snapshot): string[] {
+  return state.workflows_note
+    ? [`not watched: ${state.workflows_note}`]
+    : [...state.workflows].sort((a, b) => Number(failed(b)) - Number(failed(a))).map(workflowLine);
+}
+
 function section(title: string, lines: string[]): string[] {
   return ["", title, ...(lines.length ? lines.map((line) => `  ${line}`) : ["  none"])];
 }
@@ -36,7 +53,10 @@ function cadence(state: Snapshot): string {
   return `poll ${state.poll_seconds}s, ${timer}`;
 }
 
-export function widgetLines(state: Snapshot): string[] {
+export function widgetLines(state: Snapshot, bad: (line: string) => string = (line) => line): string[] {
+  const done = state.workflows.filter((run) => run.conclusion !== null);
+  const broken = state.workflows.filter(failed);
+  const counts = `${done.length - broken.length} ok, ${broken.length} failed, ${state.workflows.length - done.length} running`;
   return [
     `${headLine(state)}  ${cadence(state)}`,
     ...state.actions.map((action) => {
@@ -44,8 +64,11 @@ export function widgetLines(state: Snapshot): string[] {
       const result = last
         ? `${last.status}${last.exit_code === null ? "" : ` exit ${last.exit_code}`}  ${clock(last.started)}  ${last.reason}`
         : "not run yet";
-      return `  ${action.name} [${action.on.join(", ")}]  ${result}`;
+      const line = `  ${action.name} [${action.on.join(", ")}]  ${result}`;
+      return last?.status === "failed" ? bad(line) : line;
     }),
+    `  workflows  ${state.workflows_note ? `not watched: ${state.workflows_note}` : counts}`,
+    ...broken.map((run) => bad(`    ${workflowLine(run)}`)),
   ];
 }
 
@@ -56,6 +79,7 @@ export function statusText(state: Snapshot, limit = 10): string {
     cadence(state),
     `state ${state.state}`,
     ...section("actions", actions),
+    ...section("workflows", workflowLines(state)),
     ...section("events", state.events.slice(0, limit).map(eventLine)),
     ...section("action runs", state.action_runs.slice(0, limit).map(actionLine)),
     ...section("agents", state.agents.slice(0, limit).map(agentLine)),

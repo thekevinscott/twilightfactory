@@ -8,10 +8,23 @@ import { loadConfig } from "../config.js";
 import { recordsFolder } from "../paths.js";
 import { newId, now, openTables, QUERIES, readRecord, writeRecord } from "../records.js";
 import { git, remoteHead } from "../repo.js";
-import type { ActionRun, AgentRun, EventRow, Snapshot } from "../types.js";
+import type { ActionRun, AgentRun, EventRow, Snapshot, WorkflowRun } from "../types.js";
 
 const BOTBOX_MISSING =
   "not run: botbox has no command line entry point, so the daemon stopped after creating the worktree";
+
+const GH_FIELDS = "workflowDatabaseId,workflowName,status,conclusion,headSha,url,createdAt";
+const GH_MIN_SECONDS = 60;
+
+interface GhRun {
+  workflowDatabaseId: number;
+  workflowName: string;
+  status: string;
+  conclusion: string;
+  headSha: string;
+  url: string;
+  createdAt: string;
+}
 
 function message(error: unknown): string {
   const found = error as { stderr?: unknown; shortMessage?: unknown; message?: unknown };
@@ -30,6 +43,9 @@ export class Factory {
   private branch: string | null = null;
   private head: string | null = null;
   private problem: string | null = null;
+  private workflowsNote: string | null = null;
+  private workflowsChecked = 0;
+  private readonly workflowsWritten = new Map<string, string>();
   private queue: Promise<void> = Promise.resolve();
 
   constructor(readonly root: string) {
@@ -59,10 +75,11 @@ export class Factory {
   }
 
   async snapshot(): Promise<Snapshot> {
-    const [events, actionRuns, agents] = await Promise.all([
+    const [events, actionRuns, agents, workflows] = await Promise.all([
       this.db.query(QUERIES.events),
       this.db.query(QUERIES.actionRuns),
       this.db.query(QUERIES.agents),
+      this.db.query(QUERIES.workflows),
     ]);
     return {
       repo: basename(this.root),
@@ -78,6 +95,8 @@ export class Factory {
       events: events as unknown as EventRow[],
       action_runs: actionRuns as unknown as ActionRun[],
       agents: agents as unknown as AgentRun[],
+      workflows: this.workflowsNote ? [] : (workflows as unknown as WorkflowRun[]),
+      workflows_note: this.workflowsNote,
     };
   }
 
@@ -230,7 +249,49 @@ export class Factory {
       }
       this.problem = text;
     }
+    const every = Math.max(this.config.poll_seconds, GH_MIN_SECONDS) * 1000;
+    if (this.branch && Date.now() - this.workflowsChecked >= every) {
+      this.workflowsChecked = Date.now();
+      await this.pollWorkflows(this.branch);
+    }
     this.notify();
+  }
+
+  private async pollWorkflows(branch: string): Promise<void> {
+    try {
+      const { stdout } = await execa(
+        "gh",
+        ["run", "list", "--branch", branch, "--limit", "50", "--json", GH_FIELDS],
+        { cwd: this.root, stdin: "ignore", timeout: 30_000, cancelSignal: this.stopping.signal },
+      );
+      const latest = new Map<string, WorkflowRun>();
+      for (const run of JSON.parse(stdout) as GhRun[]) {
+        const id = String(run.workflowDatabaseId);
+        if (!latest.has(id)) {
+          latest.set(id, {
+            id,
+            name: run.workflowName,
+            status: run.status,
+            conclusion: run.conclusion || null,
+            head: run.headSha,
+            url: run.url,
+            created: run.createdAt,
+          });
+        }
+      }
+      for (const [id, run] of latest) {
+        const text = JSON.stringify(run);
+        if (this.workflowsWritten.get(id) !== text) {
+          writeRecord(join(this.records, "workflows", `${id}.json`), { ...run });
+          this.workflowsWritten.set(id, text);
+        }
+      }
+      this.workflowsNote = null;
+    } catch (error) {
+      const found = error as { code?: unknown };
+      this.workflowsNote =
+        found.code === "ENOENT" ? "gh is not installed" : (message(error).split(/\n|\. /)[0] ?? "");
+    }
   }
 
   private trigger(reason: Reason): void {

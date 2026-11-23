@@ -32,7 +32,7 @@ export default function factory(pi: ExtensionAPI) {
     try {
       for await (const state of open.states(signal)) {
         latest = state;
-        ctx.ui.setWidget(KEY, widgetLines(state));
+        ctx.ui.setWidget(KEY, widgetLines(state, (line) => ctx.ui.theme.fg("error", line)));
       }
     } catch {}
     if (!signal.aborted) {

@@ -2,7 +2,8 @@
 
 A daemon per git repo, used from inside the Pi coding agent. It watches the default branch on
 the remote, runs configured shell commands when the head moves or on a timer,
-and creates worktrees for local agents. Nothing here pushes.
+creates worktrees for local agents, and keeps the latest GitHub Actions run
+of each workflow on that branch. Nothing here pushes.
 
 ## Build
 
@@ -50,8 +51,9 @@ must start with a dash, so a mistyped command is never sent to a model as a
 prompt.
 
 Above the editor the extension shows the watched branch and head, the poll
-and timer intervals, and the latest result of each action. It updates as the
-daemon records things.
+and timer intervals, the latest result of each action, and a count of
+workflow runs. Failed actions and failed workflow runs are in red, one line
+each. It updates as the daemon records things.
 
 Commands:
 
@@ -90,6 +92,16 @@ Actions run through the shell in the repo root, with `TWILIGHTFACTORY_HEAD`
 and `TWILIGHTFACTORY_TRIGGER` set. Actions for one trigger run one after
 another in file order. Any action can be run by hand.
 
+## GitHub Actions
+
+The daemon runs `gh run list` for the watched branch and keeps the latest run
+of each workflow: name, status, conclusion, head and url. It only reads; it
+never starts, reruns or cancels a workflow. It asks at the poll interval, but
+not more than once a minute. `gh` picks the repo from the git remotes the way
+it does in a shell. If the remote is not GitHub, or `gh` is missing or not
+logged in, `tf status` says so in one line under `workflows` and the rest
+carries on.
+
 ## Where things are kept
 
 `$XDG_STATE_HOME/twilightfactory/<hash of repo path>/` (default
@@ -99,11 +111,12 @@ another in file order. Any action can be run by hand.
 records/events/<id>.json
 records/actions/<id>/run.json   and output.log
 records/agents/<id>/run.json
+records/workflows/<workflow id>.json
 daemon.socket  daemon.lock  daemon.stderr
 ```
 
 The daemon reads the records back with dirsql (tables `events`,
-`action_runs`, `agent_runs`). The socket is in
+`action_runs`, `agent_runs`, `workflow_runs`). The socket is in
 `$XDG_RUNTIME_DIR/twilightfactory/`.
 
 ## Agents: not finished
