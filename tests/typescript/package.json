@@ -1,0 +1,9 @@
+{
+  "name": "twilightfactory-tests",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "vitest": "^5.1.1"
+  }
+}

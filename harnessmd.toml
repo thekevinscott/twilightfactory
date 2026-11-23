@@ -1,0 +1,7 @@
+headings = ["test", "surface", "language"]
+
+[out]
+typescript = "tests/typescript/.harnessmd/{surface}/{test}.test.ts"
+
+[cli]
+typescript = ["node", "{root}/packages/node/dist/cli.js"]
