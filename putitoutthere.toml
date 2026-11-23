@@ -1,59 +1,9 @@
 [putitoutthere]
 version = 1
 
-# Three artifacts, one binary. Python ships a maturin-built wheel per
-# target; npm ships a top-level package + per-platform sub-packages.
-# Cascade: edits under packages/rust/** retrigger PyPI + npm builds.
-
 [[package]]
-name = "twilightfactory-rust"
-kind = "crates"
-crate = "twilightfactory-cli"
-path = "packages/rust"
-first_version = "0.0.1"
-globs = [
-  "packages/rust/**",
-  "LICENSE",
-]
-
-[[package]]
-name = "twilightfactory-py"
-kind = "pypi"
-pypi = "twilightfactory"
-path = "packages/python"
-first_version = "0.0.1"
-build = "maturin"
-depends_on = ["twilightfactory-rust"]
-globs = [
-  "packages/python/**",
-  "packages/rust/**",
-  "LICENSE",
-]
-targets = [
-  "x86_64-unknown-linux-gnu",
-  "aarch64-unknown-linux-gnu",
-  "x86_64-apple-darwin",
-  "aarch64-apple-darwin",
-  "x86_64-pc-windows-msvc",
-]
-
-[[package]]
-name = "twilightfactory-npm"
+name = "twilightfactory-cli"
 kind = "npm"
-npm = "twilightfactory-cli"
 path = "packages/node"
 first_version = "0.0.1"
-build = [{ mode = "bundled-cli", name = "@twilight-factory/{triple}" }]
-depends_on = ["twilightfactory-rust"]
-globs = [
-  "packages/node/**",
-  "packages/rust/**",
-  "LICENSE",
-]
-targets = [
-  "x86_64-unknown-linux-gnu",
-  "aarch64-unknown-linux-gnu",
-  "x86_64-apple-darwin",
-  "aarch64-apple-darwin",
-  "x86_64-pc-windows-msvc",
-]
+globs = ["packages/node/**", "LICENSE"]

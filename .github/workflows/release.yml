@@ -1,8 +1,6 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -11,34 +9,3 @@ jobs:
     permissions:
       contents: write
       id-token: write
-    secrets:
-      # First publish of a brand-new crate has no Trusted Publishing path
-      # on crates.io (TP binds to an already-published crate). Forward a
-      # long-lived API token; the reusable workflow skips the OIDC
-      # exchange when this secret is set. Once 0.0.1 is on crates.io,
-      # register a Trusted Publisher and unset this.
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
-  # PyPI upload runs in the caller's workflow context. Required because
-  # PyPI Trusted Publishers can't validate OIDC tokens minted from a
-  # cross-repo reusable workflow (pypi/warehouse#11096). The `if:` gate
-  # skips this job for non-PyPI repos.
-  pypi-publish:
-    needs: release
-    if: needs.release.outputs.has_pypi == 'true'
-    runs-on: ubuntu-latest
-    environment: release
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: '*-sdist'
-          path: dist/
-          merge-multiple: true
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: '*-wheel-*'
-          path: dist/
-          merge-multiple: true
-      - uses: pypa/gh-action-pypi-publish@release/v1
