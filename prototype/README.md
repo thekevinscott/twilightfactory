@@ -1,17 +1,21 @@
 # twilightfactory prototype
 
-A daemon per git repo, with a TUI attached. It watches the default branch on
+A daemon per git repo, used from inside the Pi coding agent. It watches the default branch on
 the remote, runs configured shell commands when the head moves or on a timer,
 and creates worktrees for local agents. Nothing here pushes.
 
 ## Build
 
-Node 24 and pnpm.
+Node 24 and pnpm. Bare `tf` also needs `pi` (the Pi coding agent) on PATH.
 
 ```
-pnpm --dir prototype install --ignore-workspace
+pnpm --dir prototype install
 pnpm --dir prototype run build
 ```
+
+`pnpm-workspace.yaml` here only tells pnpm not to run the build scripts of
+two packages that come in with Pi's types. Do not pass `--ignore-workspace`:
+pnpm then skips that file and the install exits with an error.
 
 ## Run
 
@@ -26,7 +30,7 @@ Commands:
 
 ```
 tf daemon           run the daemon in the foreground
-tf                  open the TUI
+tf                  open pi with the factory extension
 tf status           print the same summary as text
 tf run <action>     run a configured action now, prints the run id
 tf log <run id>     print an action run's output
@@ -37,9 +41,30 @@ tf stop             stop the daemon
 All but `daemon` and `stop` find the daemon for the repo and start one in the
 background if none is running. A background daemon stays up until `stop`.
 
-TUI keys: `r` run an action, `a` start an agent with a typed prompt, `tab`
-switch between action runs and agents, `j`/`k` or arrows move, `l` or enter
-open the log of the selected run, `esc` back, `q` quit.
+## Inside pi
+
+Bare `tf` makes sure the daemon is up, then starts your installed `pi` in the
+repo root with `dist/extension.js` loaded. Your Pi login and settings apply.
+Options after `tf` go to pi, for example `tf --no-session`. The first one
+must start with a dash, so a mistyped command is never sent to a model as a
+prompt.
+
+Above the editor the extension shows the watched branch and head, the poll
+and timer intervals, and the latest result of each action. It updates as the
+daemon records things.
+
+Commands:
+
+```
+/tf-status            the same summary as tf status
+/tf-run [action]      run an action; no name opens a picker
+/tf-log [run id]      show a run's log; no id opens a picker of recent runs
+/tf-agent [prompt]    create an agent worktree; no prompt asks for one
+```
+
+What these print goes into the Pi session but is not sent to the model. If
+the daemon stops while pi is open, run `tf status` in a shell and then
+`/reload` in pi.
 
 ## Config
 

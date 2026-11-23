@@ -1,5 +1,7 @@
 #!/usr/bin/env node
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
+import { execa } from "execa";
 import { Client } from "./daemon/client.js";
 import { daemonSocket, ensureDaemon } from "./daemon/ensure.js";
 import { serveDaemon } from "./daemon/server.js";
@@ -17,7 +19,7 @@ async function attached<T>(work: (client: Client) => Promise<T>): Promise<T> {
 }
 
 const program = new Command("tf").description(
-  "Watch this repo's default branch, run actions on new commits, start local agents.",
+  "Watch this repo's default branch, run actions on new commits, start local agents. With no command, opens pi with the factory extension.",
 );
 
 program
@@ -27,10 +29,26 @@ program
     await serveDaemon(await repoRoot(process.cwd()));
   });
 
-program.action(async () => {
-  const { runTui } = await import("./tui.js");
-  await attached(runTui);
-});
+program
+  .argument("[pi options...]", "options passed on to pi; the first must start with a dash")
+  .allowUnknownOption()
+  .action(async (passed: string[]) => {
+    if (passed[0] && !passed[0].startsWith("-")) {
+      throw new Error(`unknown command "${passed[0]}". See tf --help.`);
+    }
+    const root = await repoRoot(process.cwd());
+    await ensureDaemon(root);
+    const extension = fileURLToPath(new URL("./extension.js", import.meta.url));
+    const pi = await execa("pi", ["--extension", extension, ...passed], {
+      cwd: root,
+      stdio: "inherit",
+      reject: false,
+    });
+    if (pi.code === "ENOENT") {
+      throw new Error("pi is not on PATH. Install the Pi coding agent, then run tf again.");
+    }
+    process.exitCode = pi.exitCode ?? 1;
+  });
 
 program
   .command("status")
