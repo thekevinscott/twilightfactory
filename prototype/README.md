@@ -15,19 +15,11 @@ pnpm --dir prototype run build
 
 ## Run
 
-Every command acts on the git repo in the current directory. Run the built
-file with node from inside the target repo:
+Every command acts on the git repo in the current directory. Install the
+`tf` command once, linked to this folder so rebuilds are picked up:
 
 ```
-node /path/to/twilightfactory/prototype/dist/cli.js
-```
-
-`pnpm --dir prototype exec tf` does not work: pnpm does not link
-a package's own bin, and `--dir` would change the directory away from the
-target repo. A fish alias covers it:
-
-```
-alias tf "node /path/to/twilightfactory/prototype/dist/cli.js"
+pnpm add -g /path/to/twilightfactory/prototype
 ```
 
 Commands:
