@@ -17,11 +17,13 @@ const tokensSent = (log: string) => {
 };
 
 const newConfig = () => mkdtempSync(path.join(tmpdir(), 'tf-config-'));
+const ghLoggedOut = () => mkdtempSync(path.join(tmpdir(), 'tf-gh-'));
+const ghLoggedIn = path.resolve('tests/fixtures/token/gh-logged-in');
 
 const start = (terminal, { fixture, config = newConfig(), env = {} }: { fixture: string; config?: string; env?: Record<string, string> }) => {
   const log = randomUUID().replaceAll('-', '');
   const term = terminal(cli.join(' '), {
-    env: { HTTPS_PROXY: proxy(fixture, log), XDG_CONFIG_HOME: config, TF_GITHUB_CLIENT_ID: 'Iv1.fixtureclientid', ...env },
+    env: { HTTPS_PROXY: proxy(fixture, log), XDG_CONFIG_HOME: config, GH_CONFIG_DIR: ghLoggedOut(), TF_GITHUB_CLIENT_ID: 'Iv1.fixtureclientid', ...env },
   });
   return { term, log };
 };
@@ -43,7 +45,7 @@ test(title, async ({ terminal }) => {
 
 ```typescript
 test(title, async ({ terminal }) => {
-  const { term, log } = start(terminal, { fixture: 'empty-runs', env: { GH_MOCK_TOKEN: 'gho_fromgh' } });
+  const { term, log } = start(terminal, { fixture: 'empty-runs', env: { GH_CONFIG_DIR: ghLoggedIn } });
   await expectTerminal(term.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
   expect(tokensSent(log)).toEqual(expect.arrayContaining([expect.stringContaining('gho_fromgh')]));
 }, 30_000);
