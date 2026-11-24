@@ -10,10 +10,11 @@ interface Request {
   body?: unknown;
 }
 
-// An Octokit client whose requests are recorded and answered with `response`.
-const fake = (response: unknown, status = 200) => {
+// An Octokit client whose requests are recorded and answered in turn from `responses`.
+const fakeSequence = (responses: [unknown, number][]) => {
   const requests: Request[] = [];
   const fetch = async (url: string, init: RequestInit) => {
+    const [response, status] = responses[requests.length] ?? [null, 500];
     requests.push({
       method: init.method ?? "GET",
       url,
@@ -26,6 +27,7 @@ const fake = (response: unknown, status = 200) => {
   };
   return { github: gh.client("token", { request: { fetch } }), requests };
 };
+const fake = (response: unknown, status = 200) => fakeSequence([[response, status]]);
 
 const apiRun = (display_title: string, id = 1, conclusion: string | null = "success") => ({
   id,
@@ -165,4 +167,37 @@ test("rerunCheck re-runs the failed jobs of a run", async () => {
 test("an API error rejects", async () => {
   const { github } = fake({ message: "Bad credentials" }, 401);
   await expect(gh.lastRun(github, repo)).rejects.toThrow("Bad credentials");
+});
+
+const dispatch = (kind: gh.Kind) => ({
+  method: "POST",
+  url: `${api}/repos/owner/name/actions/workflows/${gh.WORKFLOW}/dispatches`,
+  body: { ref: "main", inputs: { kind } },
+});
+
+test.for([
+  ["a measured run", "measured"],
+  ["a plain run", "plain"],
+] as const)("confirmFix after %s went red starts a %s run", async ([, kind]) => {
+  const { github, requests } = fakeSequence([
+    [{ workflow_runs: [{ ...apiRun("Tests (plain)", 3, null), status: "in_progress" }, apiRun(`Tests (${kind})`, 2, "failure"), apiRun("Tests (measured)", 1)] }, 200],
+    [null, 204],
+  ]);
+  expect(await gh.confirmFix(github, repo)).toBe(kind);
+  expect(requests).toEqual([{ method: "GET", url: runsUrl(100) }, dispatch(kind)]);
+});
+
+test("confirmFix treats a timed out run as red", async () => {
+  const { github, requests } = fakeSequence([
+    [{ workflow_runs: [apiRun("Tests (plain)", 2), apiRun("Tests (measured)", 1, "timed_out")] }, 200],
+    [null, 204],
+  ]);
+  expect(await gh.confirmFix(github, repo)).toBe("measured");
+  expect(requests[1]).toEqual(dispatch("measured"));
+});
+
+test("confirmFix with no red run starts nothing", async () => {
+  const { github, requests } = fake({ workflow_runs: [apiRun("Tests (plain)")] });
+  await expect(gh.confirmFix(github, repo)).rejects.toThrow("no red run");
+  expect(requests).toHaveLength(1);
 });

@@ -12,5 +12,6 @@ The GitHub calls twilightfactory needs, one function each, on Octokit. Every fun
 | `startRun(github, repo, kind)` | dispatch `tests.yml` on main with `kind=plain\|measured` |
 | `fileIssue(github, repo, run)` | create an issue labelled `red` |
 | `rerunCheck(github, repo, runId)` | re-run the failed jobs of a run |
+| `confirmFix(github, repo)` | dispatch `tests.yml` with the kind of the newest red run, for the fixing agent |
 
 The workflow must set `run-name: Tests (${{ inputs.kind }})` so measured runs can be told apart.

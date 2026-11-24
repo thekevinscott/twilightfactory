@@ -135,3 +135,16 @@ export const fileIssue = async (github: Octokit, repo: string, run: Run): Promis
 export const rerunCheck = async (github: Octokit, repo: string, runId: number): Promise<void> => {
   await github.rest.actions.reRunWorkflowFailedJobs({ ...split(repo), run_id: runId });
 };
+
+const isRed = (run: Run) => run.conclusion === "failure" || run.conclusion === "timed_out";
+
+// The fixer confirms with the kind of run that went red, so a speed or memory failure is re-measured.
+export const confirmFix = async (github: Octokit, repo: string): Promise<Kind> => {
+  const red = (await runs(github, repo, 100)).find(isRed);
+  if (red === undefined) {
+    throw new Error(`no red run of ${WORKFLOW} on main in ${repo}`);
+  }
+  const kind = red.displayTitle.includes("(measured)") ? "measured" : "plain";
+  await startRun(github, repo, kind);
+  return kind;
+};
