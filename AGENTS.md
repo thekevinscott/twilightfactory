@@ -18,3 +18,10 @@ just test it_starts_a_plain_tests_run
 ```
 
 Lint and typecheck locally are fine.
+
+## Pull requests
+
+Agents merge their own PRs once CI is green.
+
+- When a PR is complete, turn on auto-merge: `gh pr merge <number> --auto --merge`. GitHub merges it when the checks pass.
+- Don't push work that isn't ready. If you have to push it early, open the PR as a draft (`gh pr create --draft`) and turn on auto-merge only after `gh pr ready`.
