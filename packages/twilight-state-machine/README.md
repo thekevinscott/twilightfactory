@@ -1,11 +1,11 @@
 # twilight-state-machine
 
-`twilightfactory-state-machine` with twilightfactory's states. The caller supplies how to fetch the last CI run and the head commit, and one action per state.
+Decides what twilightfactory does next. The caller supplies how to fetch each input; the machine returns one state. The caller acts on it and exits; the next tick calls the machine again.
 
 ```typescript
-import { Stop, twilightStateMachine } from 'twilight-state-machine';
+import { twilightStateMachine } from 'twilight-state-machine';
 
-await twilightStateMachine(inputs, { GO_PLAIN: runTests, GO_MEASURED: runMeasured, PUSH_TAG: pushTag, PUSH_RESULTS: pushResults, STOP: Stop });
+const state = await twilightStateMachine(inputs); // STOP | GO_PLAIN | GO_MEASURED | PUSH_TAG | PUSH_RESULTS
 ```
 
 `inputs` is `{ lastRun, lastGreenTag, lastMeasuredRun, lastResults, head }`, each an async function, called only when the state depends on it. `lastRun` returns the latest run of either kind, one entry of `gh run list --json status,conclusion,createdAt,headSha`, or `null`. `lastGreenTag` returns the commit of the newest green tag or `null`, and is called only when the last run passed. `lastResults` returns the commit of the newest stored speed and memory results or `null`, and is called only when the last run is a passed measured run. Where results are stored is the caller's concern. `head` returns the head commit of the default branch, and is called only when the last run passed an hour ago or more. `lastMeasuredRun` returns the latest speed and memory run, fetched at most once per state. A measured run replaces the plain run.

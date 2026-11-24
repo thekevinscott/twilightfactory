@@ -1,7 +1,7 @@
 {
   "name": "twilight-state-machine",
   "version": "0.0.1",
-  "description": "The twilightfactory state machine: what to do given the last CI run",
+  "description": "The twilightfactory state machine: what to do next given the last CI run",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -17,9 +17,6 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json --noEmit",
     "test": "vitest run"
-  },
-  "dependencies": {
-    "twilightfactory-state-machine": "link:../state-machine"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
