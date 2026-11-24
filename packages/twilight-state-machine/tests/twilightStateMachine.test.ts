@@ -10,17 +10,24 @@ const run = (status: string, conclusion: string, minutes: number, headSha: strin
 });
 const HOURS = 60;
 
-type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "PUSH_TAG";
+type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "PUSH_TAG" | "PUSH_RESULTS";
 
 interface Case {
   name: string;
-  inputs: { lastRun: Run | null; lastMeasuredRun: Run | null; head: string; lastGreenTag: string | null };
+  inputs: {
+    lastRun: Run | null;
+    lastMeasuredRun: Run | null;
+    head: string;
+    lastGreenTag: string | null;
+    lastResults?: string | null;
+  };
   outputs: { states: State[]; fetched: string[] };
 }
 
 const passed2h = run("completed", "success", 2 * HOURS, "aaa");
 const measured2h = passed2h;
 const measured25h = run("completed", "success", 25 * HOURS, "zzz");
+const measured30m = run("completed", "success", 30, "aaa");
 
 const cases: Case[] = [
   {
@@ -56,39 +63,42 @@ const cases: Case[] = [
   {
     name: "passed 30 minutes ago, new commits",
     inputs: { lastRun: run("completed", "success", 30, "aaa"), lastMeasuredRun: measured25h, head: "bbb", lastGreenTag: "aaa" },
-    outputs: { states: ["STOP"], fetched: ["lastRun", "lastGreenTag"] },
+    outputs: { states: ["STOP"], fetched: ["lastRun", "lastGreenTag", "lastMeasuredRun"] },
   },
   {
     name: "passed two hours ago, no new commits, measured run overdue",
     inputs: { lastRun: passed2h, lastMeasuredRun: measured25h, head: "aaa", lastGreenTag: "aaa" },
-    outputs: { states: ["STOP"], fetched: ["lastRun", "lastGreenTag", "head"] },
+    outputs: { states: ["STOP"], fetched: ["lastRun", "lastGreenTag", "lastMeasuredRun", "head"] },
   },
   {
     name: "passed two hours ago, new commits, measured two hours ago",
     inputs: { lastRun: passed2h, lastMeasuredRun: measured2h, head: "bbb", lastGreenTag: "aaa" },
-    outputs: { states: ["GO_PLAIN", "STOP"], fetched: ["lastRun", "lastGreenTag", "head", "lastMeasuredRun", "lastRun"] },
+    outputs: {
+      states: ["GO_PLAIN", "STOP"],
+      fetched: ["lastRun", "lastGreenTag", "lastMeasuredRun", "lastResults", "head", "lastRun"],
+    },
   },
   {
     name: "passed two hours ago, new commits, measured 25 hours ago",
     inputs: { lastRun: passed2h, lastMeasuredRun: measured25h, head: "bbb", lastGreenTag: "aaa" },
-    outputs: { states: ["GO_MEASURED", "STOP"], fetched: ["lastRun", "lastGreenTag", "head", "lastMeasuredRun", "lastRun"] },
+    outputs: { states: ["GO_MEASURED", "STOP"], fetched: ["lastRun", "lastGreenTag", "lastMeasuredRun", "head", "lastRun"] },
   },
   {
     name: "passed two hours ago, new commits, never measured",
     inputs: { lastRun: passed2h, lastMeasuredRun: null, head: "bbb", lastGreenTag: "aaa" },
-    outputs: { states: ["GO_MEASURED", "STOP"], fetched: ["lastRun", "lastGreenTag", "head", "lastMeasuredRun", "lastRun"] },
+    outputs: { states: ["GO_MEASURED", "STOP"], fetched: ["lastRun", "lastGreenTag", "lastMeasuredRun", "head", "lastRun"] },
   },
   {
     name: "passed 30 minutes ago, not tagged",
     inputs: { lastRun: run("completed", "success", 30, "aaa"), lastMeasuredRun: measured25h, head: "bbb", lastGreenTag: "zzz" },
-    outputs: { states: ["PUSH_TAG", "STOP"], fetched: ["lastRun", "lastGreenTag", "lastRun", "lastGreenTag"] },
+    outputs: { states: ["PUSH_TAG", "STOP"], fetched: ["lastRun", "lastGreenTag", "lastRun", "lastGreenTag", "lastMeasuredRun"] },
   },
   {
     name: "passed two hours ago, new commits, never tagged",
     inputs: { lastRun: passed2h, lastMeasuredRun: measured2h, head: "bbb", lastGreenTag: null },
     outputs: {
       states: ["PUSH_TAG", "GO_PLAIN", "STOP"],
-      fetched: ["lastRun", "lastGreenTag", "lastRun", "lastGreenTag", "head", "lastMeasuredRun", "lastRun"],
+      fetched: ["lastRun", "lastGreenTag", "lastRun", "lastGreenTag", "lastMeasuredRun", "lastResults", "head", "lastRun"],
     },
   },
   {
@@ -96,13 +106,35 @@ const cases: Case[] = [
     inputs: { lastRun: run("completed", "cancelled", 2 * HOURS, "aaa"), lastMeasuredRun: measured2h, head: "bbb", lastGreenTag: "zzz" },
     outputs: { states: ["GO_PLAIN", "STOP"], fetched: ["lastRun", "head", "lastMeasuredRun", "lastRun"] },
   },
+  {
+    name: "measured run passed 30 minutes ago, results not pushed",
+    inputs: { lastRun: measured30m, lastMeasuredRun: measured30m, head: "bbb", lastGreenTag: "aaa", lastResults: "zzz" },
+    outputs: {
+      states: ["PUSH_RESULTS", "STOP"],
+      fetched: ["lastRun", "lastGreenTag", "lastMeasuredRun", "lastResults", "lastRun", "lastGreenTag", "lastMeasuredRun", "lastResults"],
+    },
+  },
+  {
+    name: "measured run passed two hours ago, new commits, not tagged, results not pushed",
+    inputs: { lastRun: passed2h, lastMeasuredRun: measured2h, head: "bbb", lastGreenTag: null, lastResults: null },
+    outputs: {
+      states: ["PUSH_TAG", "PUSH_RESULTS", "GO_PLAIN", "STOP"],
+      fetched: [
+        "lastRun", "lastGreenTag",
+        "lastRun", "lastGreenTag", "lastMeasuredRun", "lastResults",
+        "lastRun", "lastGreenTag", "lastMeasuredRun", "lastResults", "head",
+        "lastRun",
+      ],
+    },
+  },
 ];
 
-test.for(cases)("$name goes $outputs.states", async ({ inputs: { lastRun, lastMeasuredRun, head, lastGreenTag }, outputs }) => {
+test.for(cases)("$name goes $outputs.states", async ({ inputs: { lastRun, lastMeasuredRun, head, lastGreenTag, lastResults = "aaa" }, outputs }) => {
   const calls: string[] = [];
   const states: State[] = [];
   let current = lastRun;
   let tag = lastGreenTag;
+  let results = lastResults;
   const fetchers = {
     lastRun: async () => {
       calls.push("lastRun");
@@ -120,6 +152,10 @@ test.for(cases)("$name goes $outputs.states", async ({ inputs: { lastRun, lastMe
       calls.push("lastGreenTag");
       return tag;
     },
+    lastResults: async () => {
+      calls.push("lastResults");
+      return results;
+    },
   };
   const go = (state: State) => async () => {
     states.push(state);
@@ -133,6 +169,10 @@ test.for(cases)("$name goes $outputs.states", async ({ inputs: { lastRun, lastMe
       states.push("PUSH_TAG");
       tag = current?.headSha ?? null;
     },
+    PUSH_RESULTS: async () => {
+      states.push("PUSH_RESULTS");
+      results = current?.headSha ?? null;
+    },
     STOP: Stop,
   });
   states.push("STOP");
@@ -140,7 +180,7 @@ test.for(cases)("$name goes $outputs.states", async ({ inputs: { lastRun, lastMe
   expect({ states, fetched: calls }).toEqual(outputs);
 });
 
-test.for(["lastRun", "lastGreenTag", "head", "lastMeasuredRun"])("a failure fetching %s is fatal and runs no action", async failing => {
+test.for(["lastRun", "lastGreenTag", "lastMeasuredRun", "lastResults", "head"])("a failure fetching %s is fatal and runs no action", async failing => {
   const fetch = <Value>(name: string, value: Value) => async () => {
     if (name === failing) {
       throw new Error(`could not fetch ${name}`);
@@ -159,8 +199,9 @@ test.for(["lastRun", "lastGreenTag", "head", "lastMeasuredRun"])("a failure fetc
         head: fetch("head", "bbb"),
         lastMeasuredRun: fetch("lastMeasuredRun", measured2h),
         lastGreenTag: fetch("lastGreenTag", "aaa"),
+        lastResults: fetch("lastResults", "aaa"),
       },
-      { GO_PLAIN: act, GO_MEASURED: act, PUSH_TAG: act, STOP: act },
+      { GO_PLAIN: act, GO_MEASURED: act, PUSH_TAG: act, PUSH_RESULTS: act, STOP: act },
     ),
   ).rejects.toThrow(`could not fetch ${failing}`);
   expect(acted).toBe(false);
