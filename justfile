@@ -17,6 +17,7 @@ typecheck:
     cd packages/twilight-factory && pnpm run typecheck
 
 build:
+    cd packages/state-machine && pnpm run build
     cd packages/twilight-factory && pnpm run build
 
 test *args: build
