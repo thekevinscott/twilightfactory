@@ -1,0 +1,8 @@
+#!/bin/sh
+# Stands in for gh in the test container. GH_MOCK_TOKEN set means logged in.
+if [ "$1" = auth ] && [ "$2" = token ] && [ -n "${GH_MOCK_TOKEN:-}" ]; then
+  echo "$GH_MOCK_TOKEN"
+  exit 0
+fi
+echo "You are not logged into any GitHub hosts. To log in, run: gh auth login" >&2
+exit 1

@@ -1,31 +1,31 @@
 ```typescript
-import { chmodSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect } from 'vitest';
 import { expect as expectTerminal } from 'curtaincall';
 import { test } from 'curtaincall/vitest';
 
-const proxy = (fixture: string) => `http://${encodeURIComponent(`tests/fixtures/token/${fixture}`)}:x@proxy:8080`;
+// The proxy logs each request under the password in HTTPS_PROXY.
+const proxy = (fixture: string, log: string) => `http://${encodeURIComponent(`tests/fixtures/token/${fixture}`)}:${log}@proxy:8080`;
 
-const fakeGh = (script: string) => {
-  const bin = mkdtempSync(path.join(tmpdir(), 'tf-gh-'));
-  writeFileSync(path.join(bin, 'gh'), `#!/bin/sh\n${script}\n`);
-  chmodSync(path.join(bin, 'gh'), 0o755);
-  return `${bin}:${process.env.PATH}`;
+const tokensSent = (log: string) => {
+  const file = path.join(process.env.PROXY_REQUESTS!, `${log}.jsonl`);
+  if (!existsSync(file)) return [];
+  return readFileSync(file, 'utf8').trim().split('\n').map(line => JSON.parse(line).authorization).filter(Boolean);
 };
 
-const env = ({ fixture, gh, config = mkdtempSync(path.join(tmpdir(), 'tf-config-')), token = '' }: { fixture: string; gh: string; config?: string; token?: string }) => ({
-  HTTPS_PROXY: proxy(fixture),
-  GH_TOKEN: token,
-  GITHUB_TOKEN: '',
-  PATH: fakeGh(gh),
-  XDG_CONFIG_HOME: config,
-  TF_GITHUB_CLIENT_ID: 'Iv1.fixtureclientid',
-});
+const newConfig = () => mkdtempSync(path.join(tmpdir(), 'tf-config-'));
 
-const loggedIn = 'echo gho_fromgh000000000000000000000000000000';
-const loggedOut = 'echo "You are not logged into any GitHub hosts." >&2; exit 1';
+const start = (terminal, { fixture, config = newConfig(), env = {} }: { fixture: string; config?: string; env?: Record<string, string> }) => {
+  const log = randomUUID().replaceAll('-', '');
+  const term = terminal(cli.join(' '), {
+    env: { HTTPS_PROXY: proxy(fixture, log), XDG_CONFIG_HOME: config, TF_GITHUB_CLIENT_ID: 'Iv1.fixtureclientid', ...env },
+  });
+  return { term, log };
+};
+
 const signedInToken = 'gho_signedin0000000000000000000000000000';
 ```
 
@@ -33,8 +33,9 @@ const signedInToken = 'gho_signedin0000000000000000000000000000';
 
 ```typescript
 test(title, async ({ terminal }) => {
-  const term = terminal(cli.join(' '), { env: env({ fixture: 'empty-runs', gh: loggedOut, token: 'gho_fromenv0000000000000000000000000000' }) });
+  const { term, log } = start(terminal, { fixture: 'empty-runs', env: { GH_TOKEN: 'gho_fromenv' } });
   await expectTerminal(term.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
+  expect(tokensSent(log)).toEqual(expect.arrayContaining([expect.stringContaining('gho_fromenv')]));
 }, 30_000);
 ```
 
@@ -42,8 +43,9 @@ test(title, async ({ terminal }) => {
 
 ```typescript
 test(title, async ({ terminal }) => {
-  const term = terminal(cli.join(' '), { env: env({ fixture: 'empty-runs', gh: loggedIn }) });
+  const { term, log } = start(terminal, { fixture: 'empty-runs', env: { GH_MOCK_TOKEN: 'gho_fromgh' } });
   await expectTerminal(term.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
+  expect(tokensSent(log)).toEqual(expect.arrayContaining([expect.stringContaining('gho_fromgh')]));
 }, 30_000);
 ```
 
@@ -51,7 +53,7 @@ test(title, async ({ terminal }) => {
 
 ```typescript
 test(title, async ({ terminal }) => {
-  const term = terminal(cli.join(' '), { env: env({ fixture: 'sign-in', gh: loggedOut }) });
+  const { term } = start(terminal, { fixture: 'sign-in' });
   await expectTerminal(term.getByText('WDJB-MJHT')).toBeVisible({ timeout: 10_000 });
   await expectTerminal(term.getByText('https://github.com/login/device')).toBeVisible();
 }, 30_000);
@@ -61,17 +63,19 @@ test(title, async ({ terminal }) => {
 
 ```typescript
 test(title, async ({ terminal }) => {
-  const config = mkdtempSync(path.join(tmpdir(), 'tf-config-'));
-  const first = terminal(cli.join(' '), { env: env({ fixture: 'sign-in', gh: loggedOut, config }) });
-  await expectTerminal(first.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
+  const config = newConfig();
+  const first = start(terminal, { fixture: 'sign-in', config });
+  await expectTerminal(first.term.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
+  expect(tokensSent(first.log)).toEqual(expect.arrayContaining([expect.stringContaining(signedInToken)]));
 
   const saved = readdirSync(path.join(config, 'twilightfactory'), { recursive: true, withFileTypes: true })
     .filter(entry => entry.isFile())
     .map(entry => readFileSync(path.join(entry.parentPath, entry.name), 'utf8'));
   expect(saved.join('\n')).toContain(signedInToken);
 
-  const second = terminal(cli.join(' '), { env: env({ fixture: 'empty-runs', gh: loggedOut, config }) });
-  await expectTerminal(second.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
-  await expectTerminal(second.getByText('https://github.com/login/device')).notToBeVisible();
+  const second = start(terminal, { fixture: 'empty-runs', config });
+  await expectTerminal(second.term.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(second.term.getByText('https://github.com/login/device')).notToBeVisible();
+  expect(tokensSent(second.log)).toEqual(expect.arrayContaining([expect.stringContaining(signedInToken)]));
 }, 30_000);
 ```

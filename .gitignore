@@ -16,3 +16,4 @@ AGENTS.md
 tests/docker/.proxy/
 tests/docker/__pycache__/
 tests/docker/recordings/
+tests/docker/.requests/
