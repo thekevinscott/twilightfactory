@@ -19,23 +19,20 @@ export const label = (state: string): string => {
   return `🔴 ${state.replace(/ - https?:\/\/\S+$/, "")}`;
 };
 
-// Replaces Pi's two footer lines with one: the tf state, the directory and branch, the model.
+// Replaces Pi's two footer lines with one: the tf state, the directory, the model.
 export const stateDisplay = (_pi: ExtensionAPI) => {
   let state = "…";
   let tui: TUI | undefined;
 
   return {
     attach: (ctx: ExtensionContext) => {
-      ctx.ui.setFooter((ui, theme, footerData) => {
+      ctx.ui.setFooter((ui, theme) => {
         tui = ui;
-        const unsubscribe = footerData.onBranchChange(() => ui.requestRender());
         return {
-          dispose: unsubscribe,
           invalidate() {},
           render(width: number): string[] {
-            const branch = footerData.getGitBranch();
             const cwd = ctx.cwd.replace(process.env.HOME ?? "\0", "~");
-            const left = `${label(state)}  ${theme.fg("dim", branch ? `${cwd} (${branch})` : cwd)}`;
+            const left = `${label(state)}  ${theme.fg("dim", cwd)}`;
             const right = theme.fg("dim", ctx.model?.id ?? "");
             const pad = " ".repeat(Math.max(1, width - visibleWidth(left) - visibleWidth(right)));
             return [truncateToWidth(left + pad + right, width)];
