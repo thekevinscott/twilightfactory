@@ -11,11 +11,13 @@ export interface Inputs<Args extends unknown[] = []> {
   // The latest run of either kind, plain or measured.
   lastRun: (...args: Args) => Promise<Run | null>;
   lastMeasuredRun: (...args: Args) => Promise<Run | null>;
+  // The commit of the newest green tag.
+  lastGreenTag: (...args: Args) => Promise<string | null>;
   // The head commit of the default branch.
   head: (...args: Args) => Promise<string>;
 }
 
-export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED";
+export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "PUSH_TAG";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -31,6 +33,9 @@ export const state = async <Args extends unknown[]>(
   }
   if (lastRun.status !== "completed" || lastRun.conclusion === "failure") {
     return "STOP";
+  }
+  if (lastRun.conclusion === "success" && (await inputs.lastGreenTag(...args)) !== lastRun.headSha) {
+    return "PUSH_TAG";
   }
   if (now.getTime() - new Date(lastRun.createdAt).getTime() < HOUR) {
     return "STOP";
