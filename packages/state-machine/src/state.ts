@@ -36,10 +36,11 @@ export const state = async <Args extends unknown[]>(
   if (lastRun.status !== "completed") {
     return "STOP";
   }
-  if (lastRun.conclusion === "failure" || lastRun.conclusion === "timed_out") {
+  // GitHub reports a job timeout as cancelled, so anything short of success is red.
+  if (lastRun.conclusion !== "success") {
     return (await inputs.openRedIssue(...args)) ? "STOP" : "FILE_ISSUE";
   }
-  if (lastRun.conclusion === "success" && (await inputs.blockedPullRequests(...args)) > 0) {
+  if ((await inputs.blockedPullRequests(...args)) > 0) {
     return "RECHECK_PRS";
   }
   if (now.getTime() - new Date(lastRun.createdAt).getTime() < HOUR) {

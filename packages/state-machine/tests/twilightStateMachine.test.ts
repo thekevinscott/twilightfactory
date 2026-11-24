@@ -195,27 +195,19 @@ const cases: Case[] = [
     outputs: { state: "GO_MEASURED", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun"] },
   },
 
-  // Neither passed nor failed
-  {
-    name: "cancelled two hours ago, new commits",
-    inputs: { lastRun: run("completed", "cancelled", 2 * HOURS, "aaa"), lastMeasuredRun: measured2h, head: "bbb" },
-    outputs: { state: "GO_PLAIN", fetched: ["lastRun", "lastMeasuredRun", "head"] },
-  },
-  {
-    name: "cancelled 30 minutes ago, new commits",
-    inputs: { lastRun: run("completed", "cancelled", 30, "aaa"), lastMeasuredRun: measured2h, head: "bbb" },
-    outputs: { state: "STOP", fetched: ["lastRun"] },
-  },
-  {
-    name: "cancelled two hours ago, no new commits",
-    inputs: { lastRun: run("completed", "cancelled", 2 * HOURS, "aaa"), lastMeasuredRun: measured2h, head: "aaa" },
-    outputs: { state: "STOP", fetched: ["lastRun", "lastMeasuredRun", "head"] },
-  },
-  {
-    name: "cancelled, a pull request is blocked",
-    inputs: { lastRun: run("completed", "cancelled", 2 * HOURS, "aaa"), lastMeasuredRun: measured2h, head: "bbb", blockedPullRequests: 2 },
-    outputs: { state: "GO_PLAIN", fetched: ["lastRun", "lastMeasuredRun", "head"] },
-  },
+  // Anything but success is red: a job timeout reports as cancelled
+  ...["cancelled", "startup_failure", "skipped"].flatMap((conclusion): Case[] => [
+    {
+      name: `${conclusion} two hours ago, no red issue`,
+      inputs: { lastRun: run("completed", conclusion, 2 * HOURS, "aaa"), lastMeasuredRun: measured2h, head: "bbb" },
+      outputs: { state: "FILE_ISSUE", fetched: ["lastRun", "openRedIssue"] },
+    },
+    {
+      name: `${conclusion} 30 minutes ago, red issue open`,
+      inputs: { lastRun: run("completed", conclusion, 30, "aaa"), lastMeasuredRun: measured2h, head: "bbb", openRedIssue: true },
+      outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
+    },
+  ]),
 ];
 
 test.for(cases)("$name is $outputs.state", async ({ inputs, outputs }) => {

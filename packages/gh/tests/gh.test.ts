@@ -187,13 +187,18 @@ test.for([
   expect(requests).toEqual([{ method: "GET", url: runsUrl(100) }, dispatch(kind)]);
 });
 
-test("confirmFix treats a timed out run as red", async () => {
+test.for(["timed_out", "cancelled", "startup_failure", "skipped"])("confirmFix treats a %s run as red", async conclusion => {
   const { github, requests } = fakeSequence([
-    [{ workflow_runs: [apiRun("Tests (plain)", 2), apiRun("Tests (measured)", 1, "timed_out")] }, 200],
+    [{ workflow_runs: [apiRun("Tests (plain)", 2), apiRun("Tests (measured)", 1, conclusion)] }, 200],
     [null, 204],
   ]);
   expect(await gh.confirmFix(github, repo)).toBe("measured");
   expect(requests[1]).toEqual(dispatch("measured"));
+});
+
+test("confirmFix skips a run still in progress", async () => {
+  const { github } = fake({ workflow_runs: [{ ...apiRun("Tests (measured)", 2, null), status: "in_progress" }, apiRun("Tests (plain)")] });
+  await expect(gh.confirmFix(github, repo)).rejects.toThrow("no red run");
 });
 
 test("confirmFix with no red run starts nothing", async () => {
