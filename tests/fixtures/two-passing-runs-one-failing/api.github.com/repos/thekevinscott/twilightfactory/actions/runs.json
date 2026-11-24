@@ -1,0 +1,50 @@
+{
+  "total_count": 3,
+  "workflow_runs": [
+    {
+      "id": 37394206820,
+      "name": "PR Monitor",
+      "display_title": "Add the session handoff rule",
+      "head_branch": "claude/session-handoff",
+      "head_sha": "c6ea3772e1c0a68c32c4d62c77dd3151f58ac28d",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "workflow_id": 273749587,
+      "run_number": 33,
+      "created_at": "2026-10-06T00:28:39Z",
+      "updated_at": "2026-10-06T00:32:32Z",
+      "html_url": "https://github.com/thekevinscott/twilightfactory/actions/runs/37394206820"
+    },
+    {
+      "id": 37368164421,
+      "name": "PR Monitor",
+      "display_title": "Add the session handoff rule",
+      "head_branch": "claude/session-handoff",
+      "head_sha": "97df8ab05c6699470502402ae5cb1a79d2da3365",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "workflow_id": 273749587,
+      "run_number": 32,
+      "created_at": "2026-10-05T20:11:16Z",
+      "updated_at": "2026-10-05T21:17:08Z",
+      "html_url": "https://github.com/thekevinscott/twilightfactory/actions/runs/37368164421"
+    },
+    {
+      "id": 33938353109,
+      "name": "Release",
+      "display_title": "Merge pull request #30 from thekevinscott/rename-twilight-factory",
+      "head_branch": "main",
+      "head_sha": "65539bff03710c773f69219439eefe78c487280b",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "failure",
+      "workflow_id": 273802745,
+      "run_number": 23,
+      "created_at": "2026-09-05T02:11:11Z",
+      "updated_at": "2026-09-05T03:00:15Z",
+      "html_url": "https://github.com/thekevinscott/twilightfactory/actions/runs/33938353109"
+    }
+  ]
+}

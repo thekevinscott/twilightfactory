@@ -1,0 +1,17 @@
+{
+  "total_count": 2,
+  "workflows": [
+    {
+      "id": 273749587,
+      "name": "PR Monitor",
+      "path": ".github/workflows/pr-monitor.yml",
+      "state": "active"
+    },
+    {
+      "id": 273802745,
+      "name": "Release",
+      "path": ".github/workflows/release.yml",
+      "state": "active"
+    }
+  ]
+}

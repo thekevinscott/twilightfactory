@@ -4,6 +4,7 @@
   "type": "module",
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "curtaincall": "link:/home/duncan/work/code/projects/developer-tooling/curtaincall/.worktrees/ts-port/packages/ts",
     "vitest": "^5.1.1"
   }
 }
