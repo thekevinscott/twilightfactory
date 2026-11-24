@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.11",
+    "@octokit/auth-oauth-device": "^8.0.5",
     "commander": "^15.1.0",
     "dirsql": "^0.4.183",
     "eventsource-parser": "^4.1.3",

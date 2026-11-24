@@ -55,7 +55,7 @@ test(title, async ({ terminal }) => {
 
 ```typescript
 test(title, async ({ terminal }) => {
-  const { term } = start(terminal, { fixture: 'sign-in' });
+  const { term } = start(terminal, { fixture: 'sign-in-pending' });
   await expectTerminal(term.getByText('WDJB-MJHT')).toBeVisible({ timeout: 10_000 });
   await expectTerminal(term.getByText('https://github.com/login/device')).toBeVisible();
 }, 30_000);

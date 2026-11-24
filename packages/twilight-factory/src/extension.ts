@@ -4,6 +4,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { stateDisplay } from "./border.js";
+import { githubToken, NoClientIdError, type Verification } from "./token.js";
 
 const REFRESH_MS = 60 * 1000;
 
@@ -16,23 +17,13 @@ const githubRepo = async (cwd: string): Promise<string> => {
   return match[1];
 };
 
-// Same order as the gh CLI: environment first, then gh's own login.
-const githubToken = async (): Promise<string | undefined> => {
-  const fromEnv = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
-  if (fromEnv) {
-    return fromEnv;
-  }
+const currentState = async (cwd: string, onVerification: (verification: Verification) => void): Promise<string> => {
+  let token: string;
   try {
-    return (await promisify(execFile)("gh", ["auth", "token"])).stdout.trim() || undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-const currentState = async (cwd: string): Promise<string> => {
-  const token = await githubToken();
-  if (!token) {
-    return "no GitHub token: set GH_TOKEN or run gh auth login";
+    token = await githubToken(onVerification);
+  } catch (error) {
+    if (error instanceof NoClientIdError) return error.message;
+    throw error;
   }
   const github = gh.client(token);
   const repo = await githubRepo(cwd);
@@ -53,10 +44,14 @@ export default function (pi: ExtensionAPI) {
   const show = async (ctx: ExtensionContext) => {
     let text: string;
     try {
-      text = await currentState(ctx.cwd);
+      text = await currentState(ctx.cwd, ({ userCode, verificationUri }) => {
+        ctx.ui.setWidget("tf-sign-in", [`Sign in to GitHub: enter ${userCode} at ${verificationUri}`]);
+        display.show("waiting for GitHub sign-in");
+      });
     } catch (error) {
       text = `error: ${error instanceof Error ? error.message : String(error)}`;
     }
+    ctx.ui.setWidget("tf-sign-in", undefined);
     display.show(text);
   };
 
