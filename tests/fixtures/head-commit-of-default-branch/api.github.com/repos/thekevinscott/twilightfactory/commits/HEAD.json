@@ -1,9 +1,0 @@
-{
-  "sha": "c6ea3772e1c0a68c32c4d62c77dd3151f58ac28d",
-  "commit": {
-    "message": "Add the session handoff rule",
-    "committer": {
-      "date": "2026-10-06T00:28:30Z"
-    }
-  }
-}
