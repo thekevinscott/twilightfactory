@@ -1,17 +1,9 @@
-target/
 node_modules/
 dist/
 coverage/
 *.log
 .DS_Store
 pnpm-lock.yaml
-
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-build/
 
 # Dolt database files (added by bd init)
 .dolt/
@@ -20,3 +12,8 @@ build/
 # Beads issue tracker (local only)
 .beads/
 AGENTS.md
+.harnessmd/
+tests/docker/.proxy/
+tests/docker/__pycache__/
+tests/docker/recordings/
+tests/docker/.requests/
