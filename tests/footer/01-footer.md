@@ -21,7 +21,7 @@ const shows = async (terminal, fixture: string, status: RegExp, env?: Record<str
 
 ```typescript
 test(title, async ({ terminal }) => {
-  const term = await shows(terminal, 'footer/tests-due', /🔵\s+tests due/);
+  const term = await shows(terminal, 'state/tests-due', /🔵\s+tests due/);
   await expectTerminal(term.getByText(/^─+ \S.*\S ─$/, { full: true })).notToBeVisible();
 }, 60000);
 ```
@@ -30,54 +30,7 @@ test(title, async ({ terminal }) => {
 
 ```typescript
 test(title, async ({ terminal }) => {
-  const term = await shows(terminal, 'footer/tests-due', /🔵\s+tests due/);
+  const term = await shows(terminal, 'state/tests-due', /🔵\s+tests due/);
   await expectTerminal(term.getByText('(auto)')).notToBeVisible();
 }, 60000);
-```
-
-# It shows a blue dot when tests are due
-
-```typescript
-test(title, ({ terminal }) => shows(terminal, 'footer/tests-due', /🔵\s+tests due/), 60000);
-```
-
-# It shows a white dot when the repo has no tests workflow
-
-```typescript
-test(title, ({ terminal }) => shows(terminal, 'footer/not-set-up', /⚪\s+not set up/), 60000);
-```
-
-# It shows a white dot while a run is in progress
-
-```typescript
-test(title, ({ terminal }) => shows(terminal, 'footer/waiting', /⚪\s+waiting/), 60000);
-```
-
-# It shows a red dot when the last run failed
-
-```typescript
-test(title, ({ terminal }) => shows(terminal, 'footer/red', /🔴\s+red/), 60000);
-```
-
-# It shows a yellow dot when a pull request is blocked
-
-```typescript
-test(title, ({ terminal }) => shows(terminal, 'footer/prs-blocked', /🟡\s+PRs blocked/), 60000);
-```
-
-# It shows a yellow dot while waiting for GitHub sign-in
-
-```typescript
-test(title, ({ terminal }) =>
-  shows(terminal, 'token/sign-in-pending', /🟡\s+sign in to GitHub/, {
-    XDG_CONFIG_HOME: mkdtempSync(path.join(tmpdir(), 'tf-config-')),
-    GH_CONFIG_DIR: mkdtempSync(path.join(tmpdir(), 'tf-gh-')),
-    TF_GITHUB_CLIENT_ID: 'Iv1.fixtureclientid',
-  }), 60000);
-```
-
-# It shows a red dot and the error when GitHub can't be reached
-
-```typescript
-test(title, ({ terminal }) => shows(terminal, 'footer/unreachable', /🔴\s+error: /), 60000);
 ```
