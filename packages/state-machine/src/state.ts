@@ -21,7 +21,7 @@ export interface Inputs<Args extends unknown[] = []> {
   blockedPullRequests: (...args: Args) => Promise<number>;
 }
 
-export type State = "NOT_SET_UP" | "STOP" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
+export type State = "NOT_SET_UP" | "QUIET" | "FIXING" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -39,17 +39,17 @@ export const state = async <Args extends unknown[]>(
     return "GO_MEASURED";
   }
   if (lastRun.status !== "completed") {
-    return "STOP";
+    return "QUIET";
   }
   // GitHub reports a job timeout as cancelled, so anything short of success is red.
   if (lastRun.conclusion !== "success") {
-    return (await inputs.openRedIssue(...args)) ? "STOP" : "FILE_ISSUE";
+    return (await inputs.openRedIssue(...args)) ? "FIXING" : "FILE_ISSUE";
   }
   if ((await inputs.blockedPullRequests(...args)) > 0) {
     return "RECHECK_PRS";
   }
   if (now.getTime() - new Date(lastRun.createdAt).getTime() < HOUR) {
-    return "STOP";
+    return "QUIET";
   }
   const lastMeasuredRun = await inputs.lastMeasuredRun(...args);
   // A fix confirmed by a plain run says nothing about the speed or memory failure it followed.
@@ -57,7 +57,7 @@ export const state = async <Args extends unknown[]>(
     return "GO_MEASURED";
   }
   if (lastRun.headSha === (await inputs.head(...args))) {
-    return "STOP";
+    return "QUIET";
   }
   if (lastMeasuredRun === null || now.getTime() - new Date(lastMeasuredRun.createdAt).getTime() >= DAY) {
     return "GO_MEASURED";

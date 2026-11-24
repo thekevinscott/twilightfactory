@@ -11,8 +11,8 @@ const inputs = (createdAt: string) => ({
   openRedIssue: async () => false,
 });
 
-test("a pass under an hour old stops, even with new commits", async () => {
-  expect(await state(inputs("2026-11-23T11:00:01Z"), [], now)).toBe("STOP");
+test("a pass under an hour old is quiet, even with new commits", async () => {
+  expect(await state(inputs("2026-11-23T11:00:01Z"), [], now)).toBe("QUIET");
 });
 
 test("a pass exactly an hour old goes when there are new commits", async () => {
