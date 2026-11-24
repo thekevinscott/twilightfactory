@@ -7,6 +7,8 @@ default:
     @just --list
 
 install:
+    cd packages/state-machine && pnpm install
+    cd packages/gh && pnpm install
     cd packages/twilight-factory && pnpm install
     pnpm install --ignore-workspace
 

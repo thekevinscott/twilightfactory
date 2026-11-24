@@ -1,0 +1,53 @@
+name: Tests
+# tf reads the kind back from the run name.
+run-name: Tests (${{ inputs.kind }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      kind:
+        type: choice
+        options: [plain, measured]
+        default: plain
+
+concurrency:
+  group: tests
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HARNESSMD: ${{ github.workspace }}/.deps/harnessmd/packages/node/dist/cli.js
+      pnpm_config_frozen_lockfile: "false"
+    steps:
+      - uses: actions/checkout@v4
+      # Not on npm: build both from GitHub at pinned commits.
+      - uses: actions/checkout@v4
+        with:
+          repository: thekevinscott/curtaincall
+          ref: b651d56a1f06074be242a16d6bf66250be486f46 # feat/typescript-port
+          path: .deps/curtaincall
+      - uses: actions/checkout@v4
+        with:
+          repository: thekevinscott/harnessmd
+          ref: 986185c0587bc40cb2da1a89056c2c54ef205d70 # main
+          path: .deps/harnessmd
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: extractions/setup-just@v3
+      - run: pnpm install && pnpm run build
+        working-directory: .deps/curtaincall/packages/ts
+      - run: pnpm install && pnpm run build
+        working-directory: .deps/harnessmd/packages/node
+      - run: pnpm pkg set devDependencies.curtaincall=link:./.deps/curtaincall/packages/ts
+      - run: just install
+      - run: just test
