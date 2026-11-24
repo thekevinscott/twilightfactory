@@ -56,6 +56,27 @@ export default function (pi: ExtensionAPI) {
     display.show(text);
   };
 
+  pi.registerCommand("tests", {
+    description: "Start a tests run on main: /tests [plain|measured]",
+    getArgumentCompletions: prefix =>
+      (["plain", "measured"] as const).filter(kind => kind.startsWith(prefix)).map(kind => ({ value: kind, label: kind })),
+    handler: async (args, ctx) => {
+      const kind = args.trim() || "plain";
+      if (kind !== "plain" && kind !== "measured") {
+        ctx.ui.notify(`Unknown kind "${kind}": use plain or measured`, "error");
+        return;
+      }
+      try {
+        const github = gh.client(await githubToken(() => display.show("SIGN_IN")));
+        await gh.startRun(github, await githubRepo(ctx.cwd), kind);
+        ctx.ui.notify(`Started a ${kind} tests run`, "info");
+        void show(ctx);
+      } catch (error) {
+        ctx.ui.notify(`Could not start a tests run: ${error instanceof Error ? error.message : String(error)}`, "error");
+      }
+    },
+  });
+
   pi.on("session_start", async (_event, ctx) => {
     if (!ctx.hasUI) {
       return;

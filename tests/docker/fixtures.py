@@ -22,7 +22,12 @@ def http_connect(flow):
 def request(flow):
     log = logs.get(flow.client_conn.id)
     if log and log.isalnum():
-        entry = {"method": flow.request.method, "url": flow.request.pretty_url, "authorization": flow.request.headers.get("authorization")}
+        entry = {
+            "method": flow.request.method,
+            "url": flow.request.pretty_url,
+            "authorization": flow.request.headers.get("authorization"),
+            "body": flow.request.get_text(),
+        }
         with open(REQUESTS / f"{log}.jsonl", "a") as out:
             out.write(json.dumps(entry) + "\n")
     fixture = fixtures.get(flow.client_conn.id)
