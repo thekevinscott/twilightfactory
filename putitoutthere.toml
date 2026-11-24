@@ -1,9 +1,0 @@
-[putitoutthere]
-version = 1
-
-[[package]]
-name = "twilightfactory-cli"
-kind = "npm"
-path = "packages/twilight-factory"
-first_version = "0.0.1"
-globs = ["packages/twilight-factory/**", "LICENSE"]
