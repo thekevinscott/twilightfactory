@@ -13,7 +13,7 @@ const state = await twilightStateMachine(inputs); // STOP | GO_PLAIN | GO_MEASUR
 | Last run | State |
 |---|---|
 | none | `GO_MEASURED` |
-| not completed | `STOP` |
+| in progress or queued | `STOP` |
 | failed, no red issue open | `FILE_ISSUE` |
 | failed, red issue open | `STOP` |
 | passed, and an open pull request has a failed main-is-green check | `RECHECK_PRS` |
