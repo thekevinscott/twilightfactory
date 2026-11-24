@@ -10,8 +10,8 @@ of each workflow on that branch. Nothing here pushes.
 Node 24 and pnpm. Bare `tf` also needs `pi` (the Pi coding agent) on PATH.
 
 ```
-pnpm --dir packages/node install
-pnpm --dir packages/node run build
+pnpm --dir packages/twilight-factory install
+pnpm --dir packages/twilight-factory run build
 ```
 
 `pnpm-workspace.yaml` here only tells pnpm not to run the build scripts of
@@ -24,7 +24,7 @@ Every command acts on the git repo in the current directory. Install the
 `tf` command once, linked to this folder so rebuilds are picked up:
 
 ```
-pnpm add -g /path/to/twilightfactory/packages/node
+pnpm add -g /path/to/twilightfactory/packages/twilight-factory
 ```
 
 Commands:

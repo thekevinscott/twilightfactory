@@ -4,4 +4,4 @@ headings = ["test"]
 typescript = ".harnessmd/{file}/{test}.test.ts"
 
 [cli]
-typescript = ["node", "{root}/packages/node/dist/cli.js"]
+typescript = ["node", "{root}/packages/twilight-factory/dist/cli.js"]

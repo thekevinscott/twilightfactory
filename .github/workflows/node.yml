@@ -3,7 +3,7 @@ name: Node
 on:
   pull_request:
     paths:
-      - 'packages/node/**'
+      - 'packages/twilight-factory/**'
       - '.github/workflows/node.yml'
 
 permissions:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: packages/node
+        working-directory: packages/twilight-factory
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

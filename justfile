@@ -7,17 +7,17 @@ default:
     @just --list
 
 install:
-    cd packages/node && pnpm install
+    cd packages/twilight-factory && pnpm install
     pnpm install --ignore-workspace
 
 lint:
-    cd packages/node && pnpm run lint
+    cd packages/twilight-factory && pnpm run lint
 
 typecheck:
-    cd packages/node && pnpm run typecheck
+    cd packages/twilight-factory && pnpm run typecheck
 
 build:
-    cd packages/node && pnpm run build
+    cd packages/twilight-factory && pnpm run build
 
 test *args: build
     node -e "fs.rmSync('.harnessmd', { recursive: true, force: true })"
