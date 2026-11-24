@@ -15,10 +15,23 @@ const githubRepo = async (cwd: string): Promise<string> => {
   return match[1];
 };
 
+// Same order as the gh CLI: environment first, then gh's own login.
+const githubToken = async (): Promise<string | undefined> => {
+  const fromEnv = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
+  if (fromEnv) {
+    return fromEnv;
+  }
+  try {
+    return (await promisify(execFile)("gh", ["auth", "token"])).stdout.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 const currentState = async (cwd: string): Promise<string> => {
-  const token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
+  const token = await githubToken();
   if (!token) {
-    return "no GH_TOKEN";
+    return "no GitHub token: set GH_TOKEN or run gh auth login";
   }
   const github = gh.client(token);
   const repo = await githubRepo(cwd);
