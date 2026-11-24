@@ -5,16 +5,17 @@ Decides what twilightfactory does next. The caller supplies how to fetch each in
 ```typescript
 import { twilightStateMachine } from 'twilight-state-machine';
 
-const state = await twilightStateMachine(inputs); // STOP | GO_PLAIN | GO_MEASURED
+const state = await twilightStateMachine(inputs); // STOP | GO_PLAIN | GO_MEASURED | RECHECK_PRS
 ```
 
-`inputs` is `{ lastRun, lastMeasuredRun, head }`, each an async function, called only when the state depends on it. `lastRun` returns the latest run of either kind, one entry of `gh run list --json status,conclusion,createdAt,headSha`, or `null`. `head` returns the head commit of the default branch, and is called only when the last run passed an hour ago or more. `lastMeasuredRun` returns the latest speed and memory run. A measured run replaces the plain run. Everything is derived from GitHub; the machine needs no stored state.
+`inputs` is `{ lastRun, blockedPullRequests, lastMeasuredRun, head }`, each an async function, called only when the state depends on it. `lastRun` returns the latest run of either kind, one entry of `gh run list --json status,conclusion,createdAt,headSha`, or `null`. `head` returns the head commit of the default branch, and is called only when the last run passed an hour ago or more. `lastMeasuredRun` returns the latest speed and memory run. `blockedPullRequests` returns how many open pull requests have a failed main-is-green check, and is called only when the last run passed; RECHECK_PRS tells the caller to re-run those checks. A measured run replaces the plain run. Everything is derived from GitHub; the machine needs no stored state.
 
 | Last run | State |
 |---|---|
 | none | `GO_MEASURED` |
 | not completed | `STOP` |
 | failed | `STOP` |
+| passed, and an open pull request has a failed main-is-green check | `RECHECK_PRS` |
 | passed less than an hour ago | `STOP` |
 | passed an hour ago or more, no new commits | `STOP` |
 | passed an hour ago or more, new commits, measured run under a day old | `GO_PLAIN` |

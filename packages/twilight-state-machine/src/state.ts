@@ -13,9 +13,11 @@ export interface Inputs<Args extends unknown[] = []> {
   lastMeasuredRun: (...args: Args) => Promise<Run | null>;
   // The head commit of the default branch.
   head: (...args: Args) => Promise<string>;
+  // Open pull requests whose main-is-green check failed.
+  blockedPullRequests: (...args: Args) => Promise<number>;
 }
 
-export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED";
+export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -31,6 +33,9 @@ export const state = async <Args extends unknown[]>(
   }
   if (lastRun.status !== "completed" || lastRun.conclusion === "failure") {
     return "STOP";
+  }
+  if (lastRun.conclusion === "success" && (await inputs.blockedPullRequests(...args)) > 0) {
+    return "RECHECK_PRS";
   }
   if (now.getTime() - new Date(lastRun.createdAt).getTime() < HOUR) {
     return "STOP";

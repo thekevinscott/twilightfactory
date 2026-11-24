@@ -6,6 +6,7 @@ const inputs = (createdAt: string) => ({
   lastRun: async (): Promise<Run> => ({ status: "completed", conclusion: "success", createdAt, headSha: "aaa" }),
   head: async () => "bbb",
   lastMeasuredRun: async () => null,
+  blockedPullRequests: async () => 0,
 });
 
 test("a pass under an hour old stops, even with new commits", async () => {
