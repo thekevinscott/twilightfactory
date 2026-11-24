@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+import { appendFileSync } from "node:fs";
+appendFileSync(process.env.GH_LOG, JSON.stringify(process.argv.slice(2)) + "\n");
+process.stdout.write(process.env.GH_STDOUT ?? "");
+process.exitCode = Number(process.env.GH_EXIT ?? 0);
