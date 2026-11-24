@@ -13,3 +13,6 @@ pnpm-lock.yaml
 .beads/
 AGENTS.md
 .harnessmd/
+tests/docker/.proxy/
+tests/docker/__pycache__/
+tests/docker/recordings/
