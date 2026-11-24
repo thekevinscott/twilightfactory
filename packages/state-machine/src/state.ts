@@ -36,7 +36,7 @@ export const state = async <Args extends unknown[]>(
   if (lastRun.status !== "completed") {
     return "STOP";
   }
-  if (lastRun.conclusion === "failure") {
+  if (lastRun.conclusion === "failure" || lastRun.conclusion === "timed_out") {
     return (await inputs.openRedIssue(...args)) ? "STOP" : "FILE_ISSUE";
   }
   if (lastRun.conclusion === "success" && (await inputs.blockedPullRequests(...args)) > 0) {

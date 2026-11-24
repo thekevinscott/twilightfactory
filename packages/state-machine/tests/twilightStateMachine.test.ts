@@ -91,6 +91,17 @@ const cases: Case[] = [
     outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
   },
 
+  {
+    name: "timed out, no red issue",
+    inputs: { lastRun: run("completed", "timed_out", 2 * HOURS, "aaa"), lastMeasuredRun: measured25h, head: "bbb" },
+    outputs: { state: "FILE_ISSUE", fetched: ["lastRun", "openRedIssue"] },
+  },
+  {
+    name: "timed out, red issue open",
+    inputs: { lastRun: run("completed", "timed_out", 2 * HOURS, "aaa"), lastMeasuredRun: measured25h, head: "bbb", openRedIssue: true },
+    outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
+  },
+
   // Green again, pull requests still blocked
   {
     name: "passed 30 minutes ago, a pull request is blocked",
