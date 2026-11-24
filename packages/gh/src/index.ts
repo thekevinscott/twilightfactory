@@ -49,6 +49,16 @@ const runs = async (github: Octokit, repo: string, perPage: number): Promise<Run
   }));
 };
 
+export const hasWorkflow = async (github: Octokit, repo: string): Promise<boolean> => {
+  try {
+    await github.rest.actions.getWorkflow({ ...split(repo), workflow_id: WORKFLOW });
+    return true;
+  } catch (error) {
+    if ((error as { status?: number }).status === 404) return false;
+    throw error;
+  }
+};
+
 export const lastRun = async (github: Octokit, repo: string): Promise<Run | null> =>
   (await runs(github, repo, 1))[0] ?? null;
 

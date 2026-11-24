@@ -13,6 +13,7 @@ const HOURS = 60;
 interface Case {
   name: string;
   inputs: {
+    hasWorkflow?: boolean;
     lastRun: Run | null;
     lastMeasuredRun: Run | null;
     head: string;
@@ -30,6 +31,13 @@ const passed = (minutes: number, headSha = "aaa") => run("completed", "success",
 const failed = (minutes: number) => run("completed", "failure", minutes, "aaa");
 
 const cases: Case[] = [
+  // The repo has no tests workflow
+  {
+    name: "no tests workflow",
+    inputs: { hasWorkflow: false, lastRun: null, lastMeasuredRun: null, head: "bbb" },
+    outputs: { state: "NOT_SET_UP", fetched: [] },
+  },
+
   // No history
   {
     name: "never run",
@@ -220,6 +228,7 @@ test.for(cases)("$name is $outputs.state", async ({ inputs, outputs }) => {
     };
 
   const state = await twilightStateMachine({
+    hasWorkflow: fetcher("hasWorkflow", inputs.hasWorkflow ?? true),
     lastRun: fetcher("lastRun", inputs.lastRun),
     lastMeasuredRun: fetcher("lastMeasuredRun", inputs.lastMeasuredRun),
     head: fetcher("head", inputs.head),
@@ -227,10 +236,12 @@ test.for(cases)("$name is $outputs.state", async ({ inputs, outputs }) => {
     openRedIssue: fetcher("openRedIssue", inputs.openRedIssue ?? false),
   });
 
-  expect({ state, fetched }).toEqual(outputs);
+  // Every state starts by checking the workflow exists.
+  expect({ state, fetched }).toEqual({ ...outputs, fetched: ["hasWorkflow", ...outputs.fetched] });
 });
 
 test.for([
+  ["hasWorkflow", passed2h],
   ["lastRun", passed2h],
   ["blockedPullRequests", passed2h],
   ["head", passed2h],
@@ -246,6 +257,7 @@ test.for([
 
   await expect(
     twilightStateMachine({
+      hasWorkflow: fetch("hasWorkflow", true),
       lastRun: fetch("lastRun", lastRun),
       head: fetch("head", "bbb"),
       lastMeasuredRun: fetch("lastMeasuredRun", measured25h),

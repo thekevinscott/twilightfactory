@@ -28,6 +28,7 @@ const currentState = async (cwd: string, onVerification: (verification: Verifica
   const github = gh.client(token);
   const repo = await githubRepo(cwd);
   const inputs: Inputs = {
+    hasWorkflow: () => gh.hasWorkflow(github, repo),
     lastRun: () => gh.lastRun(github, repo),
     lastMeasuredRun: () => gh.lastMeasuredRun(github, repo),
     head: () => gh.head(github, repo),
