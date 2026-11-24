@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createRequire } from "node:module";
 import { Command } from "commander";
+import { fileURLToPath } from "node:url";
 import { execa } from "execa";
 
 const { version, description } = createRequire(import.meta.url)("../package.json") as {
@@ -11,7 +12,7 @@ const { version, description } = createRequire(import.meta.url)("../package.json
 const program = new Command("tf").description(description).version(version);
 
 program.action(async () => {
-  const pi = await execa("pi", { stdio: "inherit", reject: false });
+  const pi = await execa("pi", ["--extension", fileURLToPath(new URL("./extension.js", import.meta.url))], { stdio: "inherit", reject: false });
   if ("code" in pi && pi.code === "ENOENT") {
     throw new Error("pi is not on PATH. Install the Pi coding agent, then run tf again.");
   }

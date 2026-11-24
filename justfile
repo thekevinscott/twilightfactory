@@ -18,6 +18,7 @@ typecheck:
 
 build:
     cd packages/state-machine && pnpm run build
+    cd packages/gh && pnpm run build
     cd packages/twilight-factory && pnpm run build
 
 test *args: build
