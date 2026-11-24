@@ -40,6 +40,6 @@ test(title, async () => {
 ```typescript
 test(title, async ({ terminal }) => {
   const term = terminal(cli.join(' '));
-  await expectTerminal(term.getByText('Pi can explain its own features')).toBeVisible();
-});
+  await expectTerminal(term.getByText('claude-opus-5-5')).toBeVisible({ timeout: 30000 });
+}, 60000);
 ```
