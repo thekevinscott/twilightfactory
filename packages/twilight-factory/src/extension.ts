@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
-import { stateDisplay } from "./border.js";
+import { stateDisplay } from "./footer.js";
 import { githubToken, NoClientIdError, type Verification } from "./token.js";
 
 const REFRESH_MS = 60 * 1000;
@@ -47,7 +47,7 @@ export default function (pi: ExtensionAPI) {
     try {
       text = await currentState(ctx.cwd, ({ userCode, verificationUri }) => {
         ctx.ui.setWidget("tf-sign-in", [`Sign in to GitHub: enter ${userCode} at ${verificationUri}`]);
-        display.show("waiting for GitHub sign-in");
+        display.show("SIGN_IN");
       });
     } catch (error) {
       text = `error: ${error instanceof Error ? error.message : String(error)}`;

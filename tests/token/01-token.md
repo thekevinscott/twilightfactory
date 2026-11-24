@@ -36,7 +36,7 @@ const signedInToken = 'gho_signedin0000000000000000000000000000';
 ```typescript
 test(title, async ({ terminal }) => {
   const { term, log } = start(terminal, { fixture: 'empty-runs', env: { GH_TOKEN: 'gho_fromenv' } });
-  await expectTerminal(term.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 10_000 });
   expect(tokensSent(log)).toEqual(expect.arrayContaining([expect.stringContaining('gho_fromenv')]));
 }, 30_000);
 ```
@@ -46,7 +46,7 @@ test(title, async ({ terminal }) => {
 ```typescript
 test(title, async ({ terminal }) => {
   const { term, log } = start(terminal, { fixture: 'empty-runs', env: { GH_CONFIG_DIR: ghLoggedIn } });
-  await expectTerminal(term.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 10_000 });
   expect(tokensSent(log)).toEqual(expect.arrayContaining([expect.stringContaining('gho_fromgh')]));
 }, 30_000);
 ```
@@ -67,7 +67,7 @@ test(title, async ({ terminal }) => {
 test(title, async ({ terminal }) => {
   const config = newConfig();
   const first = start(terminal, { fixture: 'sign-in', config });
-  await expectTerminal(first.term.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(first.term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 10_000 });
   expect(tokensSent(first.log)).toEqual(expect.arrayContaining([expect.stringContaining(signedInToken)]));
 
   const saved = readdirSync(path.join(config, 'twilightfactory'), { recursive: true, withFileTypes: true })
@@ -76,7 +76,7 @@ test(title, async ({ terminal }) => {
   expect(saved.join('\n')).toContain(signedInToken);
 
   const second = start(terminal, { fixture: 'empty-runs', config });
-  await expectTerminal(second.term.getByText(/GO_MEASURED/)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(second.term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 10_000 });
   await expectTerminal(second.term.getByText('https://github.com/login/device')).notToBeVisible();
   expect(tokensSent(second.log)).toEqual(expect.arrayContaining([expect.stringContaining(signedInToken)]));
 }, 30_000);
