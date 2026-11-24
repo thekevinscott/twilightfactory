@@ -10,3 +10,5 @@ RUN corepack enable \
   && pnpm add --global @earendil-works/pi-coding-agent@1.3.0 \
   && chmod -R a+rX /opt/pnpm /opt/corepack
 ENV HOME=/tmp/home
+RUN pi install npm:pi-claude-bridge \
+  && chmod -R a+rwX /tmp/home

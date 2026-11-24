@@ -47,3 +47,16 @@ test(title, async ({ terminal }) => {
   await expectTerminal(term.getByText(/🔵.*\(\S+\)/)).notToBeVisible();
 }, 60000);
 ```
+
+# It starts Pi on Claude through pi-claude-bridge
+
+```typescript
+test(title, async ({ terminal }) => {
+  const term = terminal(cli.join(' '), {
+    cols: 300,
+    env: { GH_TOKEN: 'gho_footer', HTTPS_PROXY: `http://${encodeURIComponent('tests/fixtures/state/tests-due')}:footer@proxy:8080` },
+  });
+  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 30000 });
+  await expectTerminal(term.getByText('claude-opus-5-5')).toBeVisible();
+}, 60000);
+```
