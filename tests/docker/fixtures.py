@@ -26,8 +26,15 @@ def request(flow):
         with open(REQUESTS / f"{log}.jsonl", "a") as out:
             out.write(json.dumps(entry) + "\n")
     fixture = fixtures.get(flow.client_conn.id)
-    file = WORKTREE / (fixture or "") / f"{flow.request.pretty_host}{flow.request.path.split('?')[0]}.json"
-    if fixture and file.is_file():
-        flow.response = http.Response.make(200, file.read_bytes(), {"content-type": "application/json"})
+    base = WORKTREE / (fixture or "") / f"{flow.request.pretty_host}{flow.request.path.split('?')[0]}"
+    # `<path>.json` answers 200; `<path>.<status>.json` answers with that status.
+    matches = [(200, base.with_name(base.name + ".json"))] + [
+        (int(file.name[len(base.name) + 1 : -5]), file)
+        for file in (base.parent.glob(f"{base.name}.[0-9][0-9][0-9].json") if base.parent.is_dir() else [])
+    ]
+    found = [(status, file) for status, file in matches if file.is_file()]
+    if fixture and found:
+        status, file = found[0]
+        flow.response = http.Response.make(status, file.read_bytes(), {"content-type": "application/json"})
     else:
         flow.response = http.Response.make(502, f"no fixture for {flow.request.pretty_url}")
