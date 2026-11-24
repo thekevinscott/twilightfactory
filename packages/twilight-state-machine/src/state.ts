@@ -13,11 +13,13 @@ export interface Inputs<Args extends unknown[] = []> {
   lastMeasuredRun: (...args: Args) => Promise<Run | null>;
   // The head commit of the default branch.
   head: (...args: Args) => Promise<string>;
+  // Whether an issue for the red main branch is open.
+  openRedIssue: (...args: Args) => Promise<boolean>;
   // Open pull requests whose main-is-green check failed.
   blockedPullRequests: (...args: Args) => Promise<number>;
 }
 
-export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS";
+export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -31,8 +33,11 @@ export const state = async <Args extends unknown[]>(
   if (lastRun === null) {
     return "GO_MEASURED";
   }
-  if (lastRun.status !== "completed" || lastRun.conclusion === "failure") {
+  if (lastRun.status !== "completed") {
     return "STOP";
+  }
+  if (lastRun.conclusion === "failure") {
+    return (await inputs.openRedIssue(...args)) ? "STOP" : "FILE_ISSUE";
   }
   if (lastRun.conclusion === "success" && (await inputs.blockedPullRequests(...args)) > 0) {
     return "RECHECK_PRS";

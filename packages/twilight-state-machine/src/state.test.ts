@@ -7,6 +7,7 @@ const inputs = (createdAt: string) => ({
   head: async () => "bbb",
   lastMeasuredRun: async () => null,
   blockedPullRequests: async () => 0,
+  openRedIssue: async () => false,
 });
 
 test("a pass under an hour old stops, even with new commits", async () => {
