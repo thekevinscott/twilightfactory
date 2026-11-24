@@ -60,3 +60,13 @@ test(title, async ({ terminal }) => {
   await expectTerminal(term.getByText('claude-opus-5-5')).toBeVisible();
 }, 60000);
 ```
+
+# It hides Pi's startup header and resource lists
+
+```typescript
+test(title, async ({ terminal }) => {
+  const term = await shows(terminal, 'state/tests-due', /🔵\s+tests due/);
+  await expectTerminal(term.getByText('Pi can explain its own features')).notToBeVisible();
+  await expectTerminal(term.getByText('[Extensions]')).notToBeVisible();
+}, 60000);
+```

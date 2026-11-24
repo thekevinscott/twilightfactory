@@ -17,13 +17,15 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.6.0",
+    "@earendil-works/pi-tui": "1.6.0",
     "@hono/node-server": "^2.1.11",
     "@octokit/auth-oauth-device": "^8.0.5",
     "commander": "^15.1.0",
     "dirsql": "^0.4.183",
     "eventsource-parser": "^4.1.3",
-    "execa": "^10.2.1",
     "hono": "^4.13.19",
+    "pi-claude-bridge": "0.13.0",
     "proper-lockfile": "^4.1.2",
     "smol-toml": "^1.9.1",
     "twilight-gh": "link:../gh",
@@ -33,8 +35,6 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "1.3.0",
-    "@earendil-works/pi-tui": "1.3.0",
     "@types/node": "^26.6.6",
     "@types/proper-lockfile": "^4.1.4",
     "@types/write-file-atomic": "^4.0.3",

@@ -6,9 +6,9 @@ RUN apt-get update \
 ENV PNPM_HOME=/opt/pnpm
 ENV COREPACK_HOME=/opt/corepack
 ENV PATH=$PNPM_HOME/bin:$PNPM_HOME:$PATH
-RUN corepack enable \
-  && pnpm add --global @earendil-works/pi-coding-agent@1.3.0 \
-  && chmod -R a+rX /opt/pnpm /opt/corepack
 ENV HOME=/tmp/home
-RUN pi install npm:pi-claude-bridge \
-  && chmod -R a+rwX /tmp/home
+RUN corepack enable \
+  && corepack install --global pnpm@12.16.1 \
+  && mkdir -p /tmp/warm && cd /tmp/warm && echo '{"scripts":{"warm":"true"}}' > package.json && pnpm run warm \
+  && rm -rf /tmp/warm \
+  && chmod -R a+rX /opt/corepack
