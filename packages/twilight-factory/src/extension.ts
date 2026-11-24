@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
+import { stateDisplay } from "./border.js";
 
 const REFRESH_MS = 60 * 1000;
 
@@ -47,6 +48,7 @@ const currentState = async (cwd: string): Promise<string> => {
 
 export default function (pi: ExtensionAPI) {
   let timer: NodeJS.Timeout | undefined;
+  const display = stateDisplay(pi);
 
   const show = async (ctx: ExtensionContext) => {
     let text: string;
@@ -55,14 +57,14 @@ export default function (pi: ExtensionAPI) {
     } catch (error) {
       text = `error: ${error instanceof Error ? error.message : String(error)}`;
     }
-    ctx.ui.setStatus("tf", `tf: ${text}`);
+    display.show(text);
   };
 
   pi.on("session_start", async (_event, ctx) => {
     if (!ctx.hasUI) {
       return;
     }
-    ctx.ui.setStatus("tf", "tf: …");
+    display.attach(ctx);
     void show(ctx);
     timer = setInterval(() => void show(ctx), REFRESH_MS);
   });
