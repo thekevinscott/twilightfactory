@@ -1,130 +1,168 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
-import { beforeEach, expect, test } from "vitest";
+import { expect, test } from "vitest";
 import * as gh from "../src/index.js";
 
 const repo = "owner/name";
-const run = (displayTitle: string, databaseId = 1): gh.Run => ({
-  databaseId,
+const api = "https://api.github.com";
+
+interface Request {
+  method: string;
+  url: string;
+  body?: unknown;
+}
+
+// An Octokit client whose requests are recorded and answered with `response`.
+const fake = (response: unknown, status = 200) => {
+  const requests: Request[] = [];
+  const fetch = async (url: string, init: RequestInit) => {
+    requests.push({
+      method: init.method ?? "GET",
+      url,
+      ...(init.body ? { body: JSON.parse(init.body as string) } : {}),
+    });
+    return new Response(status === 204 ? null : JSON.stringify(response), {
+      status,
+      headers: { "content-type": "application/json" },
+    });
+  };
+  return { github: gh.client("token", { request: { fetch } }), requests };
+};
+
+const apiRun = (display_title: string, id = 1, conclusion: string | null = "success") => ({
+  id,
   status: "completed",
-  conclusion: "success",
+  conclusion,
+  created_at: "2026-11-24T10:00:00Z",
+  head_sha: "abcdef0123",
+  display_title,
+  html_url: `https://github.com/${repo}/actions/runs/${id}`,
+});
+const run = (displayTitle: string, id = 1, conclusion = "success"): gh.Run => ({
+  id,
+  status: "completed",
+  conclusion,
   createdAt: "2026-11-24T10:00:00Z",
   headSha: "abcdef0123",
   displayTitle,
-  url: `https://github.com/${repo}/actions/runs/${databaseId}`,
+  url: `https://github.com/${repo}/actions/runs/${id}`,
 });
-
-let log: string;
-process.env.PATH = `${join(import.meta.dirname, "bin")}${delimiter}${process.env.PATH}`;
-
-beforeEach(() => {
-  log = join(mkdtempSync(join(tmpdir(), "twilight-gh-")), "log");
-  writeFileSync(log, "");
-  process.env.GH_LOG = log;
-});
-
-const respond = (value: unknown) => {
-  process.env.GH_STDOUT = JSON.stringify(value);
-};
-const calls = () => readFileSync(log, "utf8").trim().split("\n").filter(Boolean).map(line => JSON.parse(line) as string[]);
-
-const runList = (limit: string) => [
-  "run", "list", "--repo", repo, "--workflow", gh.WORKFLOW, "--branch", "main", "--limit", limit,
-  "--json", "databaseId,status,conclusion,createdAt,headSha,displayTitle,url",
-];
+const runsUrl = (perPage: number) =>
+  `${api}/repos/owner/name/actions/workflows/${gh.WORKFLOW}/runs?branch=main&per_page=${perPage}`;
 
 test("lastRun returns the newest run on main", async () => {
-  respond([run("Tests (plain)")]);
-  expect(await gh.lastRun(repo)).toEqual(run("Tests (plain)"));
-  expect(calls()).toEqual([runList("1")]);
+  const { github, requests } = fake({ workflow_runs: [apiRun("Tests (plain)")] });
+  expect(await gh.lastRun(github, repo)).toEqual(run("Tests (plain)"));
+  expect(requests).toEqual([{ method: "GET", url: runsUrl(1) }]);
 });
 
 test("lastRun returns null when there are no runs", async () => {
-  respond([]);
-  expect(await gh.lastRun(repo)).toBeNull();
+  const { github } = fake({ workflow_runs: [] });
+  expect(await gh.lastRun(github, repo)).toBeNull();
+});
+
+test("lastRun reports a run in progress with an empty conclusion", async () => {
+  const { github } = fake({ workflow_runs: [{ ...apiRun("Tests (plain)", 1, null), status: "in_progress" }] });
+  expect(await gh.lastRun(github, repo)).toEqual({ ...run("Tests (plain)", 1, ""), status: "in_progress" });
 });
 
 test("lastMeasuredRun skips plain runs", async () => {
-  respond([run("Tests (plain)", 3), run("Tests (measured)", 2), run("Tests (measured)", 1)]);
-  expect(await gh.lastMeasuredRun(repo)).toEqual(run("Tests (measured)", 2));
-  expect(calls()).toEqual([runList("100")]);
+  const { github, requests } = fake({
+    workflow_runs: [apiRun("Tests (plain)", 3), apiRun("Tests (measured)", 2), apiRun("Tests (measured)", 1)],
+  });
+  expect(await gh.lastMeasuredRun(github, repo)).toEqual(run("Tests (measured)", 2));
+  expect(requests).toEqual([{ method: "GET", url: runsUrl(100) }]);
 });
 
 test("lastMeasuredRun returns null when no measured run is in the list", async () => {
-  respond([run("Tests (plain)")]);
-  expect(await gh.lastMeasuredRun(repo)).toBeNull();
+  const { github } = fake({ workflow_runs: [apiRun("Tests (plain)")] });
+  expect(await gh.lastMeasuredRun(github, repo)).toBeNull();
 });
 
 test("head returns the sha of the default branch", async () => {
-  respond({ sha: "abcdef0123" });
-  expect(await gh.head(repo)).toBe("abcdef0123");
-  expect(calls()).toEqual([["api", `repos/${repo}/commits/HEAD`]]);
+  const { github, requests } = fake({ sha: "abcdef0123" });
+  expect(await gh.head(github, repo)).toBe("abcdef0123");
+  expect(requests).toEqual([{ method: "GET", url: `${api}/repos/owner/name/commits/HEAD` }]);
 });
 
 test.for([
-  [[{ number: 4 }], true],
-  [[], false],
-] as const)("openRedIssue is %j -> %s", async ([issues, expected]) => {
-  respond(issues);
-  expect(await gh.openRedIssue(repo)).toBe(expected);
-  expect(calls()).toEqual([
-    ["issue", "list", "--repo", repo, "--label", gh.RED_LABEL, "--state", "open", "--limit", "1", "--json", "number"],
+  ["an open red issue", [{ number: 4 }], true],
+  ["no open red issue", [], false],
+  ["only a pull request labelled red", [{ number: 5, pull_request: {} }], false],
+] as const)("openRedIssue with %s is %s", async ([, issues, expected]) => {
+  const { github, requests } = fake(issues);
+  expect(await gh.openRedIssue(github, repo)).toBe(expected);
+  expect(requests).toEqual([
+    { method: "GET", url: `${api}/repos/owner/name/issues?labels=${gh.RED_LABEL}&state=open&per_page=100` },
   ]);
 });
 
 test("blockedPullRequests returns pull requests whose main-is-green check failed", async () => {
-  const check = (workflowName: string, conclusion: string, runId: number) => ({
-    workflowName,
+  const check = (workflow: string, conclusion: string, databaseId: number) => ({
     conclusion,
-    detailsUrl: `https://github.com/${repo}/actions/runs/${runId}/job/99`,
+    checkSuite: { workflowRun: { databaseId, workflow: { name: workflow } } },
   });
-  respond([
-    { number: 1, statusCheckRollup: [check(gh.MAIN_IS_GREEN, "FAILURE", 11)] },
-    { number: 2, statusCheckRollup: [check(gh.MAIN_IS_GREEN, "SUCCESS", 12)] },
-    { number: 3, statusCheckRollup: [check("Lint", "FAILURE", 13)] },
-    { number: 4, statusCheckRollup: [] },
-    { number: 5, statusCheckRollup: [check("Lint", "SUCCESS", 14), check(gh.MAIN_IS_GREEN, "FAILURE", 15)] },
-  ]);
-  expect(await gh.blockedPullRequests(repo)).toEqual([
+  const pull = (number: number, checks: unknown[] | null) => ({
+    number,
+    commits: { nodes: [{ commit: { statusCheckRollup: checks && { contexts: { nodes: checks } } } }] },
+  });
+  const { github, requests } = fake({
+    data: {
+      repository: {
+        pullRequests: {
+          nodes: [
+            pull(1, [check(gh.MAIN_IS_GREEN, "FAILURE", 11)]),
+            pull(2, [check(gh.MAIN_IS_GREEN, "SUCCESS", 12)]),
+            pull(3, [check("Lint", "FAILURE", 13)]),
+            pull(4, null),
+            pull(5, [check("Lint", "SUCCESS", 14), check(gh.MAIN_IS_GREEN, "FAILURE", 15)]),
+            pull(6, [{}]),
+          ],
+        },
+      },
+    },
+  });
+  expect(await gh.blockedPullRequests(github, repo)).toEqual([
     { number: 1, runId: 11 },
     { number: 5, runId: 15 },
   ]);
-  expect(calls()).toEqual([
-    ["pr", "list", "--repo", repo, "--state", "open", "--limit", "100", "--json", "number,statusCheckRollup"],
-  ]);
+  expect(requests).toHaveLength(1);
+  expect(requests[0]).toMatchObject({ method: "POST", url: `${api}/graphql`, body: { variables: { owner: "owner", repo: "name" } } });
 });
 
 test.for(["plain", "measured"] as const)("startRun starts a %s run on main", async kind => {
-  respond("");
-  await gh.startRun(repo, kind);
-  expect(calls()).toEqual([["workflow", "run", gh.WORKFLOW, "--repo", repo, "--ref", "main", "-f", `kind=${kind}`]]);
+  const { github, requests } = fake(null, 204);
+  await gh.startRun(github, repo, kind);
+  expect(requests).toEqual([
+    {
+      method: "POST",
+      url: `${api}/repos/owner/name/actions/workflows/${gh.WORKFLOW}/dispatches`,
+      body: { ref: "main", inputs: { kind } },
+    },
+  ]);
 });
 
 test("fileIssue opens a red issue pointing at the run", async () => {
-  respond("");
-  await gh.fileIssue(repo, run("Tests (plain)", 7));
-  expect(calls()).toEqual([
-    [
-      "issue", "create", "--repo", repo, "--label", gh.RED_LABEL,
-      "--title", "main is red at abcdef0",
-      "--body", `Tests (plain) failed: https://github.com/${repo}/actions/runs/7`,
-    ],
+  const { github, requests } = fake({ number: 9 }, 201);
+  await gh.fileIssue(github, repo, run("Tests (plain)", 7, "failure"));
+  expect(requests).toEqual([
+    {
+      method: "POST",
+      url: `${api}/repos/owner/name/issues`,
+      body: {
+        labels: [gh.RED_LABEL],
+        title: "main is red at abcdef0",
+        body: `Tests (plain) failed: https://github.com/${repo}/actions/runs/7`,
+      },
+    },
   ]);
 });
 
 test("rerunCheck re-runs the failed jobs of a run", async () => {
-  respond("");
-  await gh.rerunCheck(repo, 15);
-  expect(calls()).toEqual([["run", "rerun", "15", "--repo", repo, "--failed"]]);
+  const { github, requests } = fake({}, 201);
+  await gh.rerunCheck(github, repo, 15);
+  expect(requests).toEqual([{ method: "POST", url: `${api}/repos/owner/name/actions/runs/15/rerun-failed-jobs` }]);
 });
 
-test("a gh error rejects", async () => {
-  respond([]);
-  process.env.GH_EXIT = "1";
-  try {
-    await expect(gh.lastRun(repo)).rejects.toThrow();
-  } finally {
-    delete process.env.GH_EXIT;
-  }
+test("an API error rejects", async () => {
+  const { github } = fake({ message: "Bad credentials" }, 401);
+  await expect(gh.lastRun(github, repo)).rejects.toThrow("Bad credentials");
 });

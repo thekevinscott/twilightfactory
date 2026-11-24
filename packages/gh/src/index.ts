@@ -1,5 +1,4 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { Octokit } from "@octokit/rest";
 
 // Conventions tf sets up in every repo.
 export const WORKFLOW = "tests.yml";
@@ -9,7 +8,7 @@ export const MAIN_IS_GREEN = "Main is green";
 export type Kind = "plain" | "measured";
 
 export interface Run {
-  databaseId: number;
+  id: number;
   status: string;
   conclusion: string;
   createdAt: string;
@@ -23,58 +22,116 @@ export interface BlockedPullRequest {
   runId: number;
 }
 
-const gh = async (...args: string[]) => (await promisify(execFile)("gh", args)).stdout;
+export const client = (token: string, options: ConstructorParameters<typeof Octokit>[0] = {}): Octokit =>
+  new Octokit({ auth: token, ...options });
 
-const runFields = "databaseId,status,conclusion,createdAt,headSha,displayTitle,url";
+const split = (repo: string) => {
+  const [owner = "", name = ""] = repo.split("/");
+  return { owner, repo: name };
+};
 
 // The workflow sets `run-name: Tests (${{ inputs.kind }})`, so the kind shows in the title.
-const runs = async (repo: string, limit: number): Promise<Run[]> =>
-  JSON.parse(
-    await gh("run", "list", "--repo", repo, "--workflow", WORKFLOW, "--branch", "main", "--limit", String(limit), "--json", runFields),
-  ) as Run[];
+const runs = async (github: Octokit, repo: string, perPage: number): Promise<Run[]> => {
+  const { data } = await github.rest.actions.listWorkflowRuns({
+    ...split(repo),
+    workflow_id: WORKFLOW,
+    branch: "main",
+    per_page: perPage,
+  });
+  return data.workflow_runs.map(run => ({
+    id: run.id,
+    status: run.status ?? "",
+    conclusion: run.conclusion ?? "",
+    createdAt: run.created_at,
+    headSha: run.head_sha,
+    displayTitle: run.display_title,
+    url: run.html_url,
+  }));
+};
 
-export const lastRun = async (repo: string): Promise<Run | null> => (await runs(repo, 1))[0] ?? null;
+export const lastRun = async (github: Octokit, repo: string): Promise<Run | null> =>
+  (await runs(github, repo, 1))[0] ?? null;
 
 // A day holds at most 24 plain runs, so the last measured run is within the newest 100.
-export const lastMeasuredRun = async (repo: string): Promise<Run | null> =>
-  (await runs(repo, 100)).find(run => run.displayTitle.includes("(measured)")) ?? null;
+export const lastMeasuredRun = async (github: Octokit, repo: string): Promise<Run | null> =>
+  (await runs(github, repo, 100)).find(run => run.displayTitle.includes("(measured)")) ?? null;
 
-export const head = async (repo: string): Promise<string> =>
-  (JSON.parse(await gh("api", `repos/${repo}/commits/HEAD`)) as { sha: string }).sha;
+export const head = async (github: Octokit, repo: string): Promise<string> =>
+  (await github.rest.repos.getCommit({ ...split(repo), ref: "HEAD" })).data.sha;
 
-export const openRedIssue = async (repo: string): Promise<boolean> =>
-  (JSON.parse(await gh("issue", "list", "--repo", repo, "--label", RED_LABEL, "--state", "open", "--limit", "1", "--json", "number")) as unknown[])
-    .length > 0;
+export const openRedIssue = async (github: Octokit, repo: string): Promise<boolean> => {
+  const { data } = await github.rest.issues.listForRepo({ ...split(repo), labels: RED_LABEL, state: "open", per_page: 100 });
+  return data.some(issue => !issue.pull_request);
+};
 
-interface Check {
-  workflowName?: string;
-  conclusion?: string;
-  detailsUrl?: string;
+const blockedQuery = `
+query($owner: String!, $repo: String!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequests(states: OPEN, first: 100) {
+      nodes {
+        number
+        commits(last: 1) {
+          nodes {
+            commit {
+              statusCheckRollup {
+                contexts(first: 100) {
+                  nodes {
+                    ... on CheckRun {
+                      conclusion
+                      checkSuite { workflowRun { databaseId workflow { name } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+interface CheckRun {
+  conclusion?: string | null;
+  checkSuite?: { workflowRun: { databaseId: number; workflow: { name: string } } | null };
 }
 
-export const blockedPullRequests = async (repo: string): Promise<BlockedPullRequest[]> => {
-  const pulls = JSON.parse(
-    await gh("pr", "list", "--repo", repo, "--state", "open", "--limit", "100", "--json", "number,statusCheckRollup"),
-  ) as { number: number; statusCheckRollup: Check[] }[];
-  return pulls.flatMap(({ number, statusCheckRollup }) => {
-    const check = statusCheckRollup.find(check => check.workflowName === MAIN_IS_GREEN && check.conclusion === "FAILURE");
-    const runId = check?.detailsUrl?.match(/\/actions\/runs\/(\d+)/)?.[1];
-    return runId ? [{ number, runId: Number(runId) }] : [];
+interface BlockedResponse {
+  repository: {
+    pullRequests: {
+      nodes: {
+        number: number;
+        commits: { nodes: { commit: { statusCheckRollup: { contexts: { nodes: CheckRun[] } } | null } }[] };
+      }[];
+    };
+  };
+}
+
+export const blockedPullRequests = async (github: Octokit, repo: string): Promise<BlockedPullRequest[]> => {
+  const data = await github.graphql<BlockedResponse>(blockedQuery, split(repo));
+  return data.repository.pullRequests.nodes.flatMap(({ number, commits }) => {
+    const checks = commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? [];
+    const failed = checks.find(
+      check => check.conclusion === "FAILURE" && check.checkSuite?.workflowRun?.workflow.name === MAIN_IS_GREEN,
+    );
+    const runId = failed?.checkSuite?.workflowRun?.databaseId;
+    return runId === undefined ? [] : [{ number, runId }];
   });
 };
 
-export const startRun = async (repo: string, kind: Kind): Promise<void> => {
-  await gh("workflow", "run", WORKFLOW, "--repo", repo, "--ref", "main", "-f", `kind=${kind}`);
+export const startRun = async (github: Octokit, repo: string, kind: Kind): Promise<void> => {
+  await github.rest.actions.createWorkflowDispatch({ ...split(repo), workflow_id: WORKFLOW, ref: "main", inputs: { kind } });
 };
 
-export const fileIssue = async (repo: string, run: Run): Promise<void> => {
-  await gh(
-    "issue", "create", "--repo", repo, "--label", RED_LABEL,
-    "--title", `main is red at ${run.headSha.slice(0, 7)}`,
-    "--body", `${run.displayTitle} failed: ${run.url}`,
-  );
+export const fileIssue = async (github: Octokit, repo: string, run: Run): Promise<void> => {
+  await github.rest.issues.create({
+    ...split(repo),
+    labels: [RED_LABEL],
+    title: `main is red at ${run.headSha.slice(0, 7)}`,
+    body: `${run.displayTitle} failed: ${run.url}`,
+  });
 };
 
-export const rerunCheck = async (repo: string, runId: number): Promise<void> => {
-  await gh("run", "rerun", String(runId), "--repo", repo, "--failed");
+export const rerunCheck = async (github: Octokit, repo: string, runId: number): Promise<void> => {
+  await github.rest.actions.reRunWorkflowFailedJobs({ ...split(repo), run_id: runId });
 };

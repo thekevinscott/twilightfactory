@@ -1,16 +1,16 @@
 # twilight-gh
 
-The `gh` commands twilightfactory needs, one function each. Every function takes the repo as `owner/name` and shells out to `gh`, so auth is whatever `gh` already uses.
+The GitHub calls twilightfactory needs, one function each, on Octokit. Every function takes a client from `client(token)` and the repo as `owner/name`.
 
-| Function | Command |
+| Function | Call |
 |---|---|
-| `lastRun(repo)` | `gh run list --workflow tests.yml --branch main --limit 1` |
-| `lastMeasuredRun(repo)` | the newest of the last 100 runs whose title has `(measured)` |
-| `head(repo)` | `gh api repos/{repo}/commits/HEAD` |
-| `openRedIssue(repo)` | `gh issue list --label red --state open` |
-| `blockedPullRequests(repo)` | `gh pr list --state open`, keeping those whose `Main is green` check failed |
-| `startRun(repo, kind)` | `gh workflow run tests.yml --ref main -f kind=plain\|measured` |
-| `fileIssue(repo, run)` | `gh issue create --label red` |
-| `rerunCheck(repo, runId)` | `gh run rerun <runId> --failed` |
+| `lastRun(github, repo)` | newest run of `tests.yml` on main |
+| `lastMeasuredRun(github, repo)` | newest of the last 100 runs whose title has `(measured)` |
+| `head(github, repo)` | `GET /repos/{repo}/commits/HEAD` |
+| `openRedIssue(github, repo)` | open issues labelled `red` |
+| `blockedPullRequests(github, repo)` | open pull requests whose `Main is green` check failed (GraphQL) |
+| `startRun(github, repo, kind)` | dispatch `tests.yml` on main with `kind=plain\|measured` |
+| `fileIssue(github, repo, run)` | create an issue labelled `red` |
+| `rerunCheck(github, repo, runId)` | re-run the failed jobs of a run |
 
 The workflow must set `run-name: Tests (${{ inputs.kind }})` so measured runs can be told apart.
