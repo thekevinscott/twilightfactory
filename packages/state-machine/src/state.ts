@@ -45,10 +45,14 @@ export const state = async <Args extends unknown[]>(
   if (now.getTime() - new Date(lastRun.createdAt).getTime() < HOUR) {
     return "STOP";
   }
+  const lastMeasuredRun = await inputs.lastMeasuredRun(...args);
+  // A fix confirmed by a plain run says nothing about the speed or memory failure it followed.
+  if (lastMeasuredRun !== null && lastMeasuredRun.conclusion !== "success") {
+    return "GO_MEASURED";
+  }
   if (lastRun.headSha === (await inputs.head(...args))) {
     return "STOP";
   }
-  const lastMeasuredRun = await inputs.lastMeasuredRun(...args);
   if (lastMeasuredRun === null || now.getTime() - new Date(lastMeasuredRun.createdAt).getTime() >= DAY) {
     return "GO_MEASURED";
   }
