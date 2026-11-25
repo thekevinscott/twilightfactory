@@ -1,0 +1,14 @@
+{
+  "data": {
+    "repository": {
+      "pullRequests": {
+        "nodes": []
+      }
+    },
+    "enablePullRequestAutoMerge": {
+      "pullRequest": {
+        "number": 32
+      }
+    }
+  }
+}
