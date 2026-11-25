@@ -6,6 +6,5 @@ export default defineConfig({
     include: [".harnessmd/**/*.test.ts"],
     setupFiles: [fileURLToPath(new URL("./setup.ts", import.meta.url))],
     testTimeout: 15_000,
-    expect: { poll: { timeout: 10_000 } },
   },
 });

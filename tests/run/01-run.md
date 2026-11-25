@@ -1,26 +1,45 @@
 ```typescript
-import { existsSync, readFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
-import path from 'node:path';
-import { expect } from 'vitest';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { expect, onTestFinished } from 'vitest';
 import { test } from 'curtaincall/vitest';
 
 const DISPATCH = 'https://api.github.com/repos/thekevinscott/twilightfactory/actions/workflows/tests.yml/dispatches';
 
-const start = (terminal, fixture: string) => {
-  const log = randomUUID().replaceAll('-', '');
-  terminal(cli.join(' '), {
-    env: { GH_TOKEN: 'gho_run', HTTPS_PROXY: `http://${encodeURIComponent(`tests/fixtures/${fixture}`)}:${log}@proxy:8080` },
+type Entry = { method: string; url: string; body: string };
+
+// The proxy POSTs each request tf makes to this server as it arrives.
+const requests = async () => {
+  const seen: Entry[] = [];
+  const waiting: [(entry: Entry) => boolean, (entry: Entry) => void][] = [];
+  const server = createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      res.end();
+      const entry: Entry = JSON.parse(body);
+      seen.push(entry);
+      for (const [match, resolve] of waiting) if (match(entry)) resolve(entry);
+    });
   });
-  return log;
+  await new Promise<void>(resolve => server.listen(0, '0.0.0.0', resolve));
+  onTestFinished(() => { server.close(); });
+  return {
+    port: (server.address() as AddressInfo).port,
+    next: (match: (entry: Entry) => boolean) => new Promise<Entry>(resolve => {
+      const found = seen.find(match);
+      if (found) resolve(found);
+      else waiting.push([match, resolve]);
+    }),
+  };
 };
 
-const dispatches = (log: string) => {
-  const file = path.join(process.env.PROXY_REQUESTS!, `${log}.jsonl`);
-  if (!existsSync(file)) return [];
-  return readFileSync(file, 'utf8').trim().split('\n').map(line => JSON.parse(line))
-    .filter(entry => entry.method === 'POST' && entry.url === DISPATCH)
-    .map(entry => JSON.parse(entry.body));
+const start = async (terminal, fixture: string) => {
+  const proxy = await requests();
+  terminal(cli.join(' '), {
+    env: { GH_TOKEN: 'gho_run', HTTPS_PROXY: `http://${encodeURIComponent(`tests/fixtures/${fixture}`)}:callback.${proxy.port}@proxy:8080` },
+  });
+  return proxy;
 };
 ```
 
@@ -30,7 +49,8 @@ The fixture's measured run is dated 2099 so it always counts as within the last 
 
 ```typescript
 test(title, async ({ terminal }) => {
-  const log = start(terminal, 'run/go-plain');
-  await expect.poll(() => dispatches(log)).toEqual([{ ref: 'main', inputs: { kind: 'plain' } }]);
+  const proxy = await start(terminal, 'run/go-plain');
+  const dispatch = await proxy.next(entry => entry.method === 'POST' && entry.url === DISPATCH);
+  expect(JSON.parse(dispatch.body)).toEqual({ ref: 'main', inputs: { kind: 'plain' } });
 });
 ```
