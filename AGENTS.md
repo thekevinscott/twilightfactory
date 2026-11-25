@@ -28,6 +28,7 @@ Agents merge their own PRs once CI is green.
 - While `tf` runs, it turns on auto-merge (merge commit) for every pull request opened in the repo, so this usually happens without you. It polls about once a minute, skips drafts, and misses pull requests opened while it was not running.
 - Avoid turning auto-merge off (`gh pr merge --disable-auto`).
 - Don't push work that isn't ready. If you have to push it early, open the PR as a draft (`gh pr create --draft`) and turn on auto-merge only after `gh pr ready`.
+- To check a PR, you may dispatch `tests.yml` on your branch: `gh workflow run tests.yml --ref <branch>`. Never use `--ref main`: only `tf` dispatches runs on main, because those runs belong to its state machine.
 
 ## Issues
 
