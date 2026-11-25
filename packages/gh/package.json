@@ -27,6 +27,10 @@
     "dist/"
   ],
   "dependencies": {
-    "@octokit/rest": "^22.0.1"
+    "@octokit/rest": "^22.0.1",
+    "@octokit/webhooks": "^14.2.0",
+    "lru-cache": "^11.5.3",
+    "p-queue": "^10.0.0",
+    "smee-client": "^5.0.0"
   }
 }
