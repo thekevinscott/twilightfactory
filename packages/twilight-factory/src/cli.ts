@@ -45,7 +45,7 @@ program.action(async () => {
       agentDir,
       settingsManager,
       resourceLoaderOptions: {
-        additionalExtensionPaths: [require.resolve("pi-claude-bridge/src/index.ts")],
+        additionalExtensionPaths: [require.resolve("pi-claude-bridge/src/index.ts"), require.resolve("pi-subagents")],
         extensionFactories: [{ name: "twilightfactory", factory: tfExtension, hidden: true }],
       },
     });
