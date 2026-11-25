@@ -7,6 +7,7 @@ import { stateDisplay } from "./footer.js";
 import { githubToken, NoClientIdError, type Verification } from "./token.js";
 
 const REFRESH_MS = 60 * 1000;
+const POLL_MS = Number(process.env.TF_POLL_MS) || 60 * 1000;
 
 const githubRepo = async (cwd: string): Promise<string> => {
   const { stdout } = await promisify(execFile)("git", ["remote", "get-url", "origin"], { cwd });
@@ -51,19 +52,38 @@ const currentState = async (cwd: string, onVerification: (verification: Verifica
   return state;
 };
 
+const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+// Polls only; webhooks need a registered hook or a smee channel.
+const pullRequestEvents = async (cwd: string, onVerification: (verification: Verification) => void, onError: (error: unknown) => void) => {
+  const github = gh.client(await githubToken(onVerification));
+  const events = gh.eventSource({
+    github,
+    repo: await githubRepo(cwd),
+    sources: [gh.pullRequestOpened()],
+    interval: POLL_MS,
+    onError: (error, event) => onError(event ? new Error(`auto-merge on #${(event.data as gh.PullRequest).number}: ${message(error)}`) : error),
+  });
+  events.on<gh.PullRequest>("pull_request.opened", ({ data }) => gh.enableAutoMerge(github, data));
+  return events;
+};
+
 export default function (pi: ExtensionAPI) {
   let timer: NodeJS.Timeout | undefined;
+  let events: gh.EventSource | undefined;
   const display = stateDisplay(pi);
+
+  const signIn = (ctx: ExtensionContext) => ({ userCode, verificationUri }: Verification) => {
+    ctx.ui.setWidget("tf-sign-in", [`Sign in to GitHub: enter ${userCode} at ${verificationUri}`]);
+    display.show("SIGN_IN");
+  };
 
   const show = async (ctx: ExtensionContext) => {
     let text: string;
     try {
-      text = await currentState(ctx.cwd, ({ userCode, verificationUri }) => {
-        ctx.ui.setWidget("tf-sign-in", [`Sign in to GitHub: enter ${userCode} at ${verificationUri}`]);
-        display.show("SIGN_IN");
-      });
+      text = await currentState(ctx.cwd, signIn(ctx));
     } catch (error) {
-      text = `error: ${error instanceof Error ? error.message : String(error)}`;
+      text = `error: ${message(error)}`;
     }
     ctx.ui.setWidget("tf-sign-in", undefined);
     display.show(text);
@@ -76,10 +96,23 @@ export default function (pi: ExtensionAPI) {
     display.attach(ctx);
     void show(ctx);
     timer = setInterval(() => void show(ctx), REFRESH_MS);
+    const onError = (error: unknown) => ctx.ui.notify(`tf: ${message(error)}`, "warning");
+    pullRequestEvents(ctx.cwd, signIn(ctx), onError)
+      .then(source => {
+        if (timer === undefined) return;
+        events = source;
+        return source.start();
+      })
+      .catch(error => {
+        // The state display already reports a missing client id.
+        if (!(error instanceof NoClientIdError)) onError(error);
+      });
   });
 
   pi.on("session_shutdown", async () => {
     clearInterval(timer);
     timer = undefined;
+    await events?.stop();
+    events = undefined;
   });
 }
