@@ -19,6 +19,12 @@ export const label = (state: string): string => {
   return `🔴 ${state.replace(/ - https?:\/\/\S+$/, "")}`;
 };
 
+const truncateLeft = (text: string, max: number): string => {
+  if (text.length <= max) return text;
+  if (max <= 3) return "";
+  return `...${text.slice(text.length - (max - 3))}`;
+};
+
 // Replaces Pi's two footer lines with one: the tf state, the directory, the model.
 export const stateDisplay = (_pi: ExtensionAPI) => {
   let state = "…";
@@ -31,9 +37,12 @@ export const stateDisplay = (_pi: ExtensionAPI) => {
         return {
           invalidate() {},
           render(width: number): string[] {
-            const cwd = ctx.cwd.replace(process.env.HOME ?? "\0", "~");
-            const left = `${label(state)}  ${theme.fg("dim", cwd)}`;
-            const right = theme.fg("dim", ctx.model?.id ?? "");
+            const status = `${label(state)}  `;
+            const model = ctx.model?.id ?? "";
+            const room = width - visibleWidth(status) - visibleWidth(model) - 1;
+            const cwd = truncateLeft(ctx.cwd.replace(process.env.HOME ?? "\0", "~"), room);
+            const left = status + theme.fg("dim", cwd);
+            const right = theme.fg("dim", model);
             const pad = " ".repeat(Math.max(1, width - visibleWidth(left) - visibleWidth(right)));
             return [truncateToWidth(left + pad + right, width)];
           },

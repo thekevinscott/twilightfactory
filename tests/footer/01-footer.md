@@ -70,3 +70,30 @@ test(title, async ({ terminal }) => {
   await expectTerminal(term.getByText('[Extensions]')).notToBeVisible();
 }, 60000);
 ```
+
+# It shows the whole directory when the terminal is wide
+
+```typescript
+test(title, async ({ terminal }) => {
+  const term = terminal(cli.join(' '), {
+    cols: 300,
+    env: { GH_TOKEN: 'gho_footer', HTTPS_PROXY: `http://${encodeURIComponent('tests/fixtures/state/tests-due')}:footer@proxy:8080` },
+  });
+  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 30000 });
+  await expectTerminal(term.getByText(process.cwd().replace(process.env.HOME ?? '\0', '~'))).toBeVisible();
+  await expectTerminal(term.getByText('...')).notToBeVisible();
+}, 60000);
+```
+
+# It cuts the directory from the left when the terminal is narrow
+
+```typescript
+test(title, async ({ terminal }) => {
+  const term = terminal(cli.join(' '), {
+    cols: 50,
+    env: { GH_TOKEN: 'gho_footer', HTTPS_PROXY: `http://${encodeURIComponent('tests/fixtures/state/tests-due')}:footer@proxy:8080` },
+  });
+  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 30000 });
+  await expectTerminal(term.getByText(new RegExp(`\\.\\.\\.\\S*/${path.basename(process.cwd())} `))).toBeVisible();
+}, 60000);
+```
