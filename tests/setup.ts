@@ -26,7 +26,7 @@ const startTf = (terminal: TerminalFactory, { fixture, log, env = {}, cols }: St
 };
 
 const waitForStatus = async (term: Terminal, status: RegExp | string) => {
-  await expectTerminal(term.getByText(status)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText(status)).toBeVisible();
   return term;
 };
 

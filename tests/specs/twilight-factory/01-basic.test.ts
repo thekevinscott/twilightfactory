@@ -20,5 +20,5 @@ test('It shows help', async () => {
 
 test('It starts in a coding agent interface', async ({ terminal }) => {
   const term = terminal(cli.join(' '));
-  await expectTerminal(term.getByText('claude-opus-5-5')).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText('claude-opus-5-5')).toBeVisible();
 });
