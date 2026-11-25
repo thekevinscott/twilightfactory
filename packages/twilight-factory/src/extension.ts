@@ -6,6 +6,7 @@ import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { stateDisplay } from "./footer.js";
 import { registerRedFixer, startRedFixer } from "./red-fixer.js";
 import { githubToken, NoClientIdError, type Verification } from "./token.js";
+import { removeMergedWorktree } from "./worktrees.js";
 
 const REFRESH_MS = Number(process.env.TF_REFRESH_MS) || 60 * 1000;
 const POLL_MS = Number(process.env.TF_POLL_MS) || 60 * 1000;
@@ -75,16 +76,27 @@ const currentState = async (
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 // Polls only; webhooks need a registered hook or a smee channel.
-const pullRequestEvents = async (cwd: string, onVerification: (verification: Verification) => void, onError: (error: unknown) => void) => {
+const pullRequestEvents = async (
+  cwd: string,
+  onVerification: (verification: Verification) => void,
+  onError: (error: unknown) => void,
+  onInfo: (text: string) => void,
+) => {
   const github = gh.client(await githubToken(onVerification));
   const events = gh.eventSource({
     github,
     repo: await githubRepo(cwd),
-    sources: [gh.pullRequestOpened()],
+    sources: [gh.pullRequestOpened(), gh.pullRequestClosed()],
     interval: POLL_MS,
-    onError: (error, event) => onError(event ? new Error(`auto-merge on #${(event.data as gh.PullRequest).number}: ${message(error)}`) : error),
+    onError: (error, event) =>
+      onError(event ? new Error(`${event.type} #${(event.data as gh.PullRequest).number}: ${message(error)}`) : error),
   });
   events.on<gh.PullRequest>("pull_request.opened", ({ data }) => gh.enableAutoMerge(github, data));
+  events.on<gh.ClosedPullRequest>("pull_request.closed", async ({ data }) => {
+    if (!data.merged) return;
+    const result = await removeMergedWorktree(cwd, data.head);
+    if (result) onInfo(`tf: #${data.number} merged: ${result}`);
+  });
   return events;
 };
 
@@ -119,7 +131,7 @@ export default function (pi: ExtensionAPI) {
     void show(ctx);
     timer = setInterval(() => void show(ctx), REFRESH_MS);
     const onError = (error: unknown) => ctx.ui.notify(`tf: ${message(error)}`, "warning");
-    pullRequestEvents(ctx.cwd, signIn(ctx), onError)
+    pullRequestEvents(ctx.cwd, signIn(ctx), onError, text => ctx.ui.notify(text, "info"))
       .then(source => {
         if (timer === undefined) return;
         events = source;
