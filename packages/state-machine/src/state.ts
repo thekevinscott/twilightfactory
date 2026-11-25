@@ -4,6 +4,8 @@ export interface Run {
   conclusion: string;
   createdAt: string;
   headSha: string;
+  // The workflow's run-name, "Tests (plain)" or "Tests (measured)".
+  displayTitle?: string;
 }
 
 // Each input is fetched only when the state depends on it.
@@ -21,7 +23,12 @@ export interface Inputs<Args extends unknown[] = []> {
   blockedPullRequests: (...args: Args) => Promise<number>;
 }
 
-export type State = "NOT_SET_UP" | "QUIET" | "FIXING" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
+export type State =
+  | "NOT_SET_UP"
+  | "QUIET"
+  | "RUNNING_PLAIN"
+  | "RUNNING_MEASURED"
+  | "FIXING" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -39,7 +46,7 @@ export const state = async <Args extends unknown[]>(
     return "GO_MEASURED";
   }
   if (lastRun.status !== "completed") {
-    return "QUIET";
+    return lastRun.displayTitle?.includes("(measured)") ? "RUNNING_MEASURED" : "RUNNING_PLAIN";
   }
   // GitHub reports a job timeout as cancelled, so anything short of success is red.
   if (lastRun.conclusion !== "success") {
