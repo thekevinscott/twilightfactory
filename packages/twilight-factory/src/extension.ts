@@ -40,9 +40,13 @@ const currentState = async (cwd: string, onVerification: (verification: Verifica
     blockedPullRequests: async () => (await gh.blockedPullRequests(github, repo)).length,
   };
   const state = await twilightStateMachine(inputs);
-  if (state === "GO_PLAIN" && headSha !== startedFor) {
-    await gh.startRun(github, repo, "plain");
-    startedFor = headSha;
+  if (state === "GO_PLAIN" || state === "GO_MEASURED") {
+    // GO_MEASURED can be decided before the state machine reads head.
+    const sha = headSha ?? (await inputs.head());
+    if (sha !== startedFor) {
+      await gh.startRun(github, repo, state === "GO_PLAIN" ? "plain" : "measured");
+      startedFor = sha;
+    }
   }
   return state;
 };
