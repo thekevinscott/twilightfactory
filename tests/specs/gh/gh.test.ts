@@ -131,6 +131,12 @@ test('It ignores pull requests that Main is green does not block', async () => {
   expect(value.map(pr => pr.number)).not.toContain(3);
 });
 
+test('It ignores pull requests labeled run-ci, which their own run rechecks', async () => {
+  const { value, requests } = await call('blocked', gh.blockedPullRequests);
+  expect(requests[0].body.query).toContain('labels(');
+  expect(value.map(pr => pr.number)).not.toContain(7);
+});
+
 test('It ignores pull requests with no checks or no commits', async () => {
   const { value } = await call('blocked', gh.blockedPullRequests);
   expect(value).toEqual([{ number: 1, runId: 101 }, { number: 6, runId: 601 }]);

@@ -4,6 +4,8 @@ import { Octokit } from "@octokit/rest";
 export const WORKFLOW = "tests.yml";
 export const RED_LABEL = "red";
 export const MAIN_IS_GREEN = "Main is green";
+// A pull request with this label is judged by its own tests.yml run, not by main.
+export const RUN_CI_LABEL = "run-ci";
 
 export type Kind = "plain" | "measured";
 
@@ -82,6 +84,7 @@ query($owner: String!, $repo: String!) {
     pullRequests(states: OPEN, first: 100) {
       nodes {
         number
+        labels(first: 100) { nodes { name } }
         commits(last: 1) {
           nodes {
             commit {
@@ -113,6 +116,7 @@ interface BlockedResponse {
     pullRequests: {
       nodes: {
         number: number;
+        labels?: { nodes: { name: string }[] };
         commits: { nodes: { commit: { statusCheckRollup: { contexts: { nodes: CheckRun[] } } | null } }[] };
       }[];
     };
@@ -121,7 +125,9 @@ interface BlockedResponse {
 
 export const blockedPullRequests = async (github: Octokit, repo: string): Promise<BlockedPullRequest[]> => {
   const data = await github.graphql<BlockedResponse>(blockedQuery, split(repo));
-  return data.repository.pullRequests.nodes.flatMap(({ number, commits }) => {
+  return data.repository.pullRequests.nodes.flatMap(({ number, labels, commits }) => {
+    // Their own run finishing re-runs the check; re-running it on main's account would loop.
+    if (labels?.nodes.some(label => label.name === RUN_CI_LABEL)) return [];
     const checks = commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? [];
     const failed = checks.find(
       check => check.conclusion === "FAILURE" && check.checkSuite?.workflowRun?.workflow.name === MAIN_IS_GREEN,

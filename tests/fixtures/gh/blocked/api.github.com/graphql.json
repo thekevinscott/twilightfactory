@@ -144,6 +144,41 @@
                 }
               ]
             }
+          },
+          {
+            "number": 7,
+            "labels": {
+              "nodes": [
+                {
+                  "name": "run-ci"
+                }
+              ]
+            },
+            "commits": {
+              "nodes": [
+                {
+                  "commit": {
+                    "statusCheckRollup": {
+                      "contexts": {
+                        "nodes": [
+                          {
+                            "conclusion": "FAILURE",
+                            "checkSuite": {
+                              "workflowRun": {
+                                "databaseId": 701,
+                                "workflow": {
+                                  "name": "Main is green"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
           }
         ]
       }
