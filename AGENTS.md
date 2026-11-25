@@ -11,10 +11,11 @@ Every feature and fix starts with a failing test.
 
 Step 2 is the only time to run tests locally. Never run the full suite locally: CI is the source of truth, and speed and memory numbers are only accurate there.
 
-Run one test by its file name. harnessmd writes each heading to its own file, named after the heading in snake case, and vitest filters by path:
+Run one test by its name with vitest's `-t` filter, or one file by its path:
 
 ```sh
-just test it_starts_a_plain_tests_run
+just test -t 'It shows help'
+just test tests/specs/twilight-factory/01-basic.test.ts
 ```
 
 Lint and typecheck locally are fine.

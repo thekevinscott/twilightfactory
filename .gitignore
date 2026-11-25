@@ -11,7 +11,6 @@ pnpm-lock.yaml
 
 # Beads issue tracker (local only)
 .beads/
-.harnessmd/
 tests/docker/.proxy/
 tests/docker/__pycache__/
 tests/docker/recordings/
