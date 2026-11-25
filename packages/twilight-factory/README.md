@@ -102,6 +102,21 @@ it does in a shell. If the remote is not GitHub, or `gh` is missing or not
 logged in, `tf status` says so in one line under `workflows` and the rest
 carries on.
 
+## Starting test runs as a GitHub App
+
+With `$XDG_CONFIG_HOME/twilightfactory/github-app.json` (default
+`~/.config`), tf starts `tests.yml` runs as that app, so they show the app as
+the actor. Everything else still uses your token. Without the file, runs start
+with your token. If the file is there but unusable, the footer shows the error
+and nothing is started.
+
+```json
+{ "appId": 123456, "installationId": 7890123 }
+```
+
+The key is read from `github-app.pem` next to it, or from `privateKeyPath`
+(relative to the config file). The app needs Actions: read and write.
+
 ## Where things are kept
 
 `$XDG_STATE_HOME/twilightfactory/<hash of repo path>/` (default

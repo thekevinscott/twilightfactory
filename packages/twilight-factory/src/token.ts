@@ -7,8 +7,11 @@ import { createOAuthDeviceAuth } from "@octokit/auth-oauth-device";
 
 export type Verification = { userCode: string; verificationUri: string };
 
-const tokenFile = () =>
-  path.join(process.env.XDG_CONFIG_HOME || path.join(homedir(), ".config"), "twilightfactory", "github-token");
+const configDir = () => path.join(process.env.XDG_CONFIG_HOME || path.join(homedir(), ".config"), "twilightfactory");
+
+const tokenFile = () => path.join(configDir(), "github-token");
+
+export const appConfigFile = () => path.join(configDir(), "github-app.json");
 
 const fromGh = async (): Promise<string | undefined> => {
   try {

@@ -1,0 +1,6 @@
+{
+  "token": "ghs_fromapp",
+  "expires_at": "2099-01-01T00:00:00Z",
+  "permissions": { "actions": "write", "metadata": "read" },
+  "repository_selection": "selected"
+}
