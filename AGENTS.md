@@ -29,6 +29,14 @@ Agents merge their own PRs once CI is green.
 - Avoid turning auto-merge off (`gh pr merge --disable-auto`).
 - Don't push work that isn't ready. If you have to push it early, open the PR as a draft (`gh pr create --draft`) and turn on auto-merge only after `gh pr ready`.
 
+## Issues
+
+When Kevin raises a bug, request, idea or follow-up, file a GitHub issue right away. Don't ask first.
+
+- Put Kevin's words in the body. Add links, run IDs or file paths as context.
+- One concern per issue.
+- Questions that only ask for information don't need an issue.
+
 ## Worktrees
 
 The main checkout stays on `main`. Never switch branches there: the global `tf` command runs from it.
