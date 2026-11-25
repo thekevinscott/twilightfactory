@@ -38,6 +38,16 @@ test('It shows the whole directory when the terminal is wide', async ({ terminal
 });
 
 test('It cuts the directory from the left when the terminal is narrow', async ({ terminal }) => {
-  const term = await testsDue(terminal, 50);
+  const term = await testsDue(terminal, 60);
   await expectTerminal(term.getByText(new RegExp(`\\.\\.\\.\\S*/${path.basename(process.cwd())} `))).toBeVisible();
+});
+
+test('It puts four spaces between the status and the directory', async ({ terminal }) => {
+  const term = await testsDue(terminal, 300);
+  await expectTerminal(term.getByText(/tests due {4}\S/)).toBeVisible();
+});
+
+test('It keeps at least three spaces between the directory and the model when narrow', async ({ terminal }) => {
+  const term = await testsDue(terminal, 60);
+  await expectTerminal(term.getByText(/\.\.\.\S* {3,}claude-opus-5-5/)).toBeVisible();
 });
