@@ -1,24 +1,11 @@
 ```typescript
-import { execFile } from 'node:child_process';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { promisify } from 'node:util';
-import { expect } from 'vitest';
-import { expect as expectTerminal } from 'curtaincall';
 import { test } from 'curtaincall/vitest';
-const tf = async (...args: string[]) => (await promisify(execFile)(cli[0], [...cli.slice(1), ...args], { encoding: 'utf8' })).stdout.trim();
 
-const start = (terminal, fixture: string, env: Record<string, string> = { GH_TOKEN: 'gho_footer' }) =>
-  terminal(cli.join(' '), {
-    env: { HTTPS_PROXY: `http://${encodeURIComponent(`tests/fixtures/${fixture}`)}:footer@proxy:8080`, ...env },
-  });
-
-const shows = async (terminal, fixture: string, status: RegExp, env?: Record<string, string>) => {
-  const term = start(terminal, fixture, env);
-  await expectTerminal(term.getByText(status)).toBeVisible({ timeout: 10_000 });
-  return term;
-};
+const shows = (terminal, fixture: string, status: RegExp, env: Record<string, string> = { GH_TOKEN: 'gho_footer' }) =>
+  waitForStatus(startTf(terminal, cli, { fixture, env }).term, status);
 ```
 
 # It has never run
