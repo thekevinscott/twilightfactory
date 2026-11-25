@@ -25,3 +25,15 @@ Agents merge their own PRs once CI is green.
 
 - When a PR is complete, turn on auto-merge: `gh pr merge <number> --auto --merge`. GitHub merges it when the checks pass.
 - Don't push work that isn't ready. If you have to push it early, open the PR as a draft (`gh pr create --draft`) and turn on auto-merge only after `gh pr ready`.
+
+## Worktrees
+
+The main checkout stays on `main`. Never switch branches there: the global `tf` command runs from it.
+
+Do all work in a worktree under `.worktrees/`:
+
+```sh
+git worktree add .worktrees/<branch> -b <branch> origin/main
+```
+
+To remove one, `cd` to the main checkout first, then `git worktree remove .worktrees/<branch>`.
