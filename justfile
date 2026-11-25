@@ -37,6 +37,9 @@ test-docker network="replay" *args:
     shift
     export NETWORK={{network}} HOST_UID=$(id -u) HOST_GID=$(id -g)
     export WORKTREE=$PWD
+    # Compose defaults the project name to "docker" everywhere, so worktrees would tear down each other's containers.
+    name=$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9_-' '-' | sed 's/^[^a-z0-9]*//;s/-*$//')
+    export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-${name:-tests}}
     export REPOSITORY=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
     export CURTAINCALL=$(realpath node_modules/curtaincall)
     export EGRESS=internet
