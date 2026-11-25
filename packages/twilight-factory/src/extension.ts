@@ -17,6 +17,9 @@ const githubRepo = async (cwd: string): Promise<string> => {
   return match[1];
 };
 
+// GitHub can take a few seconds to list a dispatched run, so remember which head we already started.
+let startedFor: string | undefined;
+
 const currentState = async (cwd: string, onVerification: (verification: Verification) => void): Promise<string> => {
   let token: string;
   try {
@@ -27,15 +30,21 @@ const currentState = async (cwd: string, onVerification: (verification: Verifica
   }
   const github = gh.client(token);
   const repo = await githubRepo(cwd);
+  let headSha: string | undefined;
   const inputs: Inputs = {
     hasWorkflow: () => gh.hasWorkflow(github, repo),
     lastRun: () => gh.lastRun(github, repo),
     lastMeasuredRun: () => gh.lastMeasuredRun(github, repo),
-    head: () => gh.head(github, repo),
+    head: async () => (headSha = await gh.head(github, repo)),
     openRedIssue: () => gh.openRedIssue(github, repo),
     blockedPullRequests: async () => (await gh.blockedPullRequests(github, repo)).length,
   };
-  return twilightStateMachine(inputs);
+  const state = await twilightStateMachine(inputs);
+  if (state === "GO_PLAIN" && headSha !== startedFor) {
+    await gh.startRun(github, repo, "plain");
+    startedFor = headSha;
+  }
+  return state;
 };
 
 export default function (pi: ExtensionAPI) {
