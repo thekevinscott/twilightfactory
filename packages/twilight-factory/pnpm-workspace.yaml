@@ -1,3 +1,5 @@
 allowBuilds:
   "@google/genai": false
   protobufjs: false
+patchedDependencies:
+  pi-claude-bridge@0.13.0: patches/pi-claude-bridge@0.13.0.patch
