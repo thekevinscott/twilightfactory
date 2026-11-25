@@ -4,9 +4,10 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { stateDisplay } from "./footer.js";
+import { registerRedFixer, startRedFixer } from "./red-fixer.js";
 import { githubToken, NoClientIdError, type Verification } from "./token.js";
 
-const REFRESH_MS = 60 * 1000;
+const REFRESH_MS = Number(process.env.TF_REFRESH_MS) || 60 * 1000;
 const POLL_MS = Number(process.env.TF_POLL_MS) || 60 * 1000;
 
 const githubRepo = async (cwd: string): Promise<string> => {
@@ -20,8 +21,15 @@ const githubRepo = async (cwd: string): Promise<string> => {
 
 // GitHub can take a few seconds to list a dispatched run, so remember which head we already started.
 let startedFor: string | undefined;
+let fixingFor: number | undefined;
 
-const currentState = async (cwd: string, onVerification: (verification: Verification) => void): Promise<string> => {
+type FailedRun = Pick<gh.Run, "id" | "url" | "headSha">;
+
+const currentState = async (
+  cwd: string,
+  onVerification: (verification: Verification) => void,
+  onRed: (run: FailedRun) => Promise<void>,
+): Promise<string> => {
   let token: string;
   try {
     token = await githubToken(onVerification);
@@ -32,9 +40,10 @@ const currentState = async (cwd: string, onVerification: (verification: Verifica
   const github = gh.client(token);
   const repo = await githubRepo(cwd);
   let headSha: string | undefined;
+  const seen: { lastRun?: gh.Run | null } = {};
   const inputs: Inputs = {
     hasWorkflow: () => gh.hasWorkflow(github, repo),
-    lastRun: () => gh.lastRun(github, repo),
+    lastRun: async () => (seen.lastRun = await gh.lastRun(github, repo)),
     lastMeasuredRun: () => gh.lastMeasuredRun(github, repo),
     head: async () => (headSha = await gh.head(github, repo)),
     openRedIssue: () => gh.openRedIssue(github, repo),
@@ -47,6 +56,17 @@ const currentState = async (cwd: string, onVerification: (verification: Verifica
     if (sha !== startedFor) {
       await gh.startRun(github, repo, state === "GO_PLAIN" ? "plain" : "measured");
       startedFor = sha;
+    }
+  }
+  // FILE_ISSUE holds until the fixer files its issue, so start it once per failed run.
+  const run = seen.lastRun;
+  if (state === "FILE_ISSUE" && run && run.id !== fixingFor) {
+    fixingFor = run.id;
+    try {
+      await onRed(run);
+    } catch (error) {
+      fixingFor = undefined;
+      throw error;
     }
   }
   return state;
@@ -71,6 +91,7 @@ const pullRequestEvents = async (cwd: string, onVerification: (verification: Ver
 export default function (pi: ExtensionAPI) {
   let timer: NodeJS.Timeout | undefined;
   let events: gh.EventSource | undefined;
+  let redFixer: { dispose(): void } | undefined;
   const display = stateDisplay(pi);
 
   const signIn = (ctx: ExtensionContext) => ({ userCode, verificationUri }: Verification) => {
@@ -81,7 +102,7 @@ export default function (pi: ExtensionAPI) {
   const show = async (ctx: ExtensionContext) => {
     let text: string;
     try {
-      text = await currentState(ctx.cwd, signIn(ctx));
+      text = await currentState(ctx.cwd, signIn(ctx), run => startRedFixer(pi, ctx.cwd, run));
     } catch (error) {
       text = `error: ${message(error)}`;
     }
@@ -94,6 +115,7 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     display.attach(ctx);
+    redFixer = registerRedFixer(pi);
     void show(ctx);
     timer = setInterval(() => void show(ctx), REFRESH_MS);
     const onError = (error: unknown) => ctx.ui.notify(`tf: ${message(error)}`, "warning");
@@ -112,6 +134,8 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_shutdown", async () => {
     clearInterval(timer);
     timer = undefined;
+    redFixer?.dispose();
+    redFixer = undefined;
     await events?.stop();
     events = undefined;
   });
