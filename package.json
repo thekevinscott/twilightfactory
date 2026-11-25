@@ -6,6 +6,7 @@
     "@types/node": "^24.0.0",
     "curtaincall": "link:/home/duncan/work/code/projects/developer-tooling/curtaincall/packages/ts",
     "test-proxy": "link:./packages/test-proxy",
+    "twilight-gh": "link:./packages/gh",
     "twilight-state-machine": "link:./packages/state-machine",
     "vitest": "^5.1.1",
     "wireit": "^0.15.0"
