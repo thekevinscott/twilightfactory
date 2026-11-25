@@ -1,0 +1,12 @@
+diff --git a/src/config.ts b/src/config.ts
+index f9d2d501f0b0cb48df89d5b71440789d0d716dc1..b35927a6ec363759dcc0c2d17b881d09bf8f585a 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -61,6 +61,7 @@ export function loadConfig(): Config {
+ 	}
+ 	// Normalize unset to "claude_code" and false/null to absent so each state hashes one way.
+ 	const provider = { ...global.provider };
++	if (!provider.pathToClaudeCodeExecutable && process.env.CLAUDE_BRIDGE_CLAUDE_EXECUTABLE) provider.pathToClaudeCodeExecutable = process.env.CLAUDE_BRIDGE_CLAUDE_EXECUTABLE;
+ 	if (preset === undefined || preset === "claude_code") provider.systemPromptPreset = "claude_code";
+ 	else delete provider.systemPromptPreset;
+ 	return { askClaude: global.askClaude, provider };

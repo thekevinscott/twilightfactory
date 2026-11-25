@@ -11,6 +11,7 @@ import {
   SessionManager,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import { stageClaudeExecutable } from "./claude-executable.js";
 import tfExtension from "./extension.js";
 
 const require = createRequire(import.meta.url);
@@ -24,6 +25,8 @@ const OVERRIDES = { defaultProvider: "claude-bridge", defaultModel: "claude-opus
 const program = new Command("tf").description(description).version(version);
 
 program.action(async () => {
+  const claudeExecutable = stageClaudeExecutable();
+  if (claudeExecutable) process.env.CLAUDE_BRIDGE_CLAUDE_EXECUTABLE ??= claudeExecutable;
   const cwd = process.cwd();
   const agentDir = getAgentDir();
 
