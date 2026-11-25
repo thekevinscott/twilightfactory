@@ -4,6 +4,7 @@ default:
     @just --list
 
 install:
+    cd packages/test-proxy && pnpm install
     cd packages/state-machine && pnpm install
     cd packages/gh && pnpm install
     cd packages/twilight-factory && pnpm install
@@ -16,6 +17,7 @@ typecheck:
     cd packages/twilight-factory && pnpm run typecheck
 
 build:
+    cd packages/test-proxy && pnpm run build
     cd packages/state-machine && pnpm run build
     cd packages/gh && pnpm run build
     cd packages/twilight-factory && pnpm run build
@@ -29,7 +31,7 @@ _test-host *args: build
 test *args:
     just test-docker replay "$@"
 
-# Run the tests in a container whose only way out is a proxy.
+# Run the tests in a container; in replay it has no network at all.
 # network: replay (answers from each test's fixture), record (real network, JSON saved to tests/docker/recordings), live (real network).
 [positional-arguments]
 test-docker network="replay" *args:
@@ -43,7 +45,6 @@ test-docker network="replay" *args:
     export EGRESS=internet
     [ "$NETWORK" != replay ] || export EGRESS=nowhere
     compose="docker compose -f tests/docker/compose.yaml"
-    trash-put tests/docker/.proxy tests/docker/.requests 2>/dev/null || true
-    mkdir -p tests/docker/recordings tests/docker/.proxy tests/docker/.requests
-    trap '$compose down --volumes --remove-orphans >/dev/null 2>&1; trash-put tests/docker/.proxy tests/docker/.requests 2>/dev/null' EXIT
+    mkdir -p tests/docker/recordings
+    trap '$compose down --volumes --remove-orphans >/dev/null 2>&1' EXIT
     $compose run --rm --build tests just _test-host "$@"

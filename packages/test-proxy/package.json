@@ -1,0 +1,33 @@
+{
+  "name": "test-proxy",
+  "version": "0.0.1",
+  "private": true,
+  "description": "An HTTPS proxy for tests of child processes: answers from fixture folders and reports each request to the test",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "files": [
+    "dist/"
+  ],
+  "dependencies": {
+    "mockttp": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.1"
+  }
+}

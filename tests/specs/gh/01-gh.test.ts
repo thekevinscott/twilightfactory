@@ -1,6 +1,5 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { expect, test } from 'vitest';
@@ -25,19 +24,13 @@ const call = async (fixture: string, fn: string, args: unknown[] = [], { token =
   const { stdout } = await promisify(execFile)(
     'node',
     ['--input-type=module', '-e', script, path.resolve('packages/gh/dist/index.js'), fn, token, repo, JSON.stringify(args), JSON.stringify(options)],
-    { encoding: 'utf8', env: { ...process.env, HTTPS_PROXY: `http://${encodeURIComponent(`tests/fixtures/gh/${fixture}`)}:${log}@proxy:8080` } },
+    { encoding: 'utf8', env: { ...process.env, ...proxyEnv(`gh/${fixture}`, log) } },
   );
   return { ...JSON.parse(stdout), requests: requests(log) };
 };
 
-const requests = (log: string) => {
-  const file = path.join(process.env.PROXY_REQUESTS!, `${log}.jsonl`);
-  if (!existsSync(file)) return [];
-  return readFileSync(file, 'utf8').trim().split('\n').map(line => {
-    const { body, ...entry } = JSON.parse(line);
-    return body ? { ...entry, body: JSON.parse(body) } : entry;
-  });
-};
+const requests = (log: string) =>
+  requestLog(log).map(({ body, ...entry }) => (body ? { ...entry, body: JSON.parse(body) } : entry));
 
 const run = (id: number, displayTitle: string, extra: Record<string, string> = {}) => ({
   id,
