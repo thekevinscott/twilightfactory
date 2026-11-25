@@ -15,7 +15,7 @@ Run one test by its name with vitest's `-t` filter, or one file by its path:
 
 ```sh
 just test -t 'It shows help'
-just test tests/specs/twilight-factory/01-basic.test.ts
+just test tests/specs/twilight-factory/basic.test.ts
 ```
 
 Lint and typecheck locally are fine.
