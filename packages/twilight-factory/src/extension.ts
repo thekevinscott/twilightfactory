@@ -4,6 +4,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { stateDisplay } from "./footer.js";
+import { pullRequestPane } from "./pr-pane.js";
 import { githubToken, NoClientIdError, type Verification } from "./token.js";
 
 const REFRESH_MS = 60 * 1000;
@@ -21,16 +22,7 @@ const githubRepo = async (cwd: string): Promise<string> => {
 // GitHub can take a few seconds to list a dispatched run, so remember which head we already started.
 let startedFor: string | undefined;
 
-const currentState = async (cwd: string, onVerification: (verification: Verification) => void): Promise<string> => {
-  let token: string;
-  try {
-    token = await githubToken(onVerification);
-  } catch (error) {
-    if (error instanceof NoClientIdError) return error.message;
-    throw error;
-  }
-  const github = gh.client(token);
-  const repo = await githubRepo(cwd);
+const currentState = async (github: ReturnType<typeof gh.client>, repo: string): Promise<string> => {
   let headSha: string | undefined;
   const inputs: Inputs = {
     hasWorkflow: () => gh.hasWorkflow(github, repo),
@@ -72,6 +64,7 @@ export default function (pi: ExtensionAPI) {
   let timer: NodeJS.Timeout | undefined;
   let events: gh.EventSource | undefined;
   const display = stateDisplay(pi);
+  const pane = pullRequestPane();
 
   const signIn = (ctx: ExtensionContext) => ({ userCode, verificationUri }: Verification) => {
     ctx.ui.setWidget("tf-sign-in", [`Sign in to GitHub: enter ${userCode} at ${verificationUri}`]);
@@ -79,14 +72,21 @@ export default function (pi: ExtensionAPI) {
   };
 
   const show = async (ctx: ExtensionContext) => {
-    let text: string;
+    let github: ReturnType<typeof gh.client>;
+    let repo: string;
     try {
-      text = await currentState(ctx.cwd, signIn(ctx));
+      github = gh.client(await githubToken(signIn(ctx)));
+      repo = await githubRepo(ctx.cwd);
     } catch (error) {
-      text = `error: ${message(error)}`;
+      ctx.ui.setWidget("tf-sign-in", undefined);
+      display.show(error instanceof NoClientIdError ? error.message : `error: ${message(error)}`);
+      return;
     }
     ctx.ui.setWidget("tf-sign-in", undefined);
-    display.show(text);
+    await Promise.all([
+      currentState(github, repo).then(display.show, (error: unknown) => display.show(`error: ${message(error)}`)),
+      gh.recentPullRequests(github, repo).then(pane.show, (error: unknown) => pane.fail(message(error))),
+    ]);
   };
 
   pi.on("session_start", async (_event, ctx) => {
@@ -94,6 +94,7 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     display.attach(ctx);
+    pane.attach(ctx);
     void show(ctx);
     timer = setInterval(() => void show(ctx), REFRESH_MS);
     const onError = (error: unknown) => ctx.ui.notify(`tf: ${message(error)}`, "warning");
@@ -114,5 +115,6 @@ export default function (pi: ExtensionAPI) {
     timer = undefined;
     await events?.stop();
     events = undefined;
+    pane.dispose();
   });
 }
