@@ -22,21 +22,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      HARNESSMD: ${{ github.workspace }}/.deps/harnessmd/packages/node/dist/cli.js
       pnpm_config_frozen_lockfile: "false"
     steps:
       - uses: actions/checkout@v4
-      # Not on npm: build both from GitHub at pinned commits.
+      # Not on npm: build it from GitHub at a pinned commit.
       - uses: actions/checkout@v4
         with:
           repository: thekevinscott/curtaincall
           ref: 38824c8e5e50fe0fb218c029eaa02682c20665b5 # main, after PR 57
           path: .deps/curtaincall
-      - uses: actions/checkout@v4
-        with:
-          repository: thekevinscott/harnessmd
-          ref: 986185c0587bc40cb2da1a89056c2c54ef205d70 # main
-          path: .deps/harnessmd
       - uses: pnpm/action-setup@v4
         with:
           version: 12.16.1
@@ -46,8 +40,6 @@ jobs:
       - uses: extractions/setup-just@v3
       - run: pnpm install && pnpm run build
         working-directory: .deps/curtaincall/packages/ts
-      - run: pnpm install && pnpm run build
-        working-directory: .deps/harnessmd/packages/node
       - run: pnpm pkg set devDependencies.curtaincall=link:./.deps/curtaincall/packages/ts
       - run: just install
       - run: just test

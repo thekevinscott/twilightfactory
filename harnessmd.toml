@@ -1,7 +1,0 @@
-headings = ["test"]
-
-[out]
-typescript = ".harnessmd/{file}/{test}.test.ts"
-
-[cli]
-typescript = ["node", "{root}/packages/twilight-factory/dist/cli.js"]
