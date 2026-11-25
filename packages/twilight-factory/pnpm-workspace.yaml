@@ -2,4 +2,5 @@ allowBuilds:
   "@google/genai": false
   protobufjs: false
 patchedDependencies:
+  '@earendil-works/pi-coding-agent@1.6.0': patches/@earendil-works__pi-coding-agent@1.6.0.patch
   pi-claude-bridge@0.13.0: patches/pi-claude-bridge@0.13.0.patch
