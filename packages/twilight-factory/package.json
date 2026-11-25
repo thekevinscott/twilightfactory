@@ -12,9 +12,9 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "lint": "eslint src",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "wireit",
+    "lint": "wireit",
+    "typecheck": "wireit"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "1.6.0",
@@ -41,10 +41,61 @@
     "@typescript-eslint/eslint-plugin": "^8.61.0",
     "@typescript-eslint/parser": "^8.61.0",
     "eslint": "^10.4.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wireit": "^0.15.0"
   },
   "repository": "https://github.com/thekevinscott/twilightfactory",
   "files": [
     "dist/"
-  ]
+  ],
+  "wireit": {
+    "build": {
+      "command": "tsc -p tsconfig.json",
+      "dependencies": [
+        "../gh:build",
+        "../state-machine:build"
+      ],
+      "files": [
+        "src/**/*.ts",
+        "tsconfig.json"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "lint": {
+      "command": "eslint src",
+      "dependencies": [
+        "../gh:build",
+        "../state-machine:build"
+      ],
+      "files": [
+        "src/**/*.ts",
+        "tsconfig.json",
+        "eslint.config.js"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "dependencies": [
+        "../gh:build",
+        "../state-machine:build"
+      ],
+      "files": [
+        "src/**/*.ts",
+        "tsconfig.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  }
 }
