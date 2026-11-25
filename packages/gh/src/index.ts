@@ -146,6 +146,37 @@ export const rerunCheck = async (github: Octokit, repo: string, runId: number): 
   await github.rest.actions.reRunWorkflowFailedJobs({ ...split(repo), run_id: runId });
 };
 
+export interface PullRequestStatus {
+  number: number;
+  title: string;
+  url: string;
+  draft: boolean;
+  state: "open" | "merged" | "closed";
+}
+
+const CLOSED_SHOWN = 5;
+// GitHub can't sort by close time, so read a margin of recently updated ones and sort those.
+const CLOSED_SCANNED = 30;
+
+export const recentPullRequests = async (github: Octokit, repo: string): Promise<PullRequestStatus[]> => {
+  const [open, closed] = await Promise.all([
+    github.rest.pulls.list({ ...split(repo), state: "open", per_page: 100 }),
+    github.rest.pulls.list({ ...split(repo), state: "closed", sort: "updated", direction: "desc", per_page: CLOSED_SCANNED }),
+  ]);
+  const status = (pr: (typeof open.data)[number]): PullRequestStatus => ({
+    number: pr.number,
+    title: pr.title,
+    url: pr.html_url,
+    draft: pr.draft ?? false,
+    state: pr.closed_at === null ? "open" : pr.merged_at === null ? "closed" : "merged",
+  });
+  const recentlyClosed = closed.data
+    .filter(pr => pr.closed_at !== null)
+    .sort((a, b) => Date.parse(b.closed_at!) - Date.parse(a.closed_at!))
+    .slice(0, CLOSED_SHOWN);
+  return [...open.data.filter(pr => pr.closed_at === null), ...recentlyClosed].map(status);
+};
+
 const isRed = (run: Run) => run.status === "completed" && run.conclusion !== "success";
 
 // The fixer confirms with the kind of run that went red, so a speed or memory failure is re-measured.
