@@ -181,3 +181,19 @@ test("serve takes signed webhooks over HTTP", async () => {
   expect(response.status).toBe(200);
   expect(seen).toEqual([{ type: "pull", key: "14:t", data: 14, via: "webhook" }]);
 });
+
+test("a source without a secret still polls", async () => {
+  const { events, state, seen } = setup({ secret: undefined });
+  state.pulls = [{ id: 15, updated_at: "t" }];
+  await events.start();
+  await events.stop();
+  expect(seen).toEqual([{ type: "pull", key: "15:t", data: 15, via: "poll" }]);
+});
+
+test("a source without a secret refuses webhooks", async () => {
+  const { events, seen } = setup({ secret: undefined });
+  await expect(events.receive(await delivery("d1", { id: 16, updated_at: "t" }))).rejects.toThrow("needs a webhook secret");
+  await expect(events.serve({ port: 0 })).rejects.toThrow("needs a webhook secret");
+  await events.stop();
+  expect(seen).toEqual([]);
+});

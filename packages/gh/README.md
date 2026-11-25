@@ -36,7 +36,7 @@ await events.stop();                                  // stop polling and servin
 
 - Dedupe: an event fires once per `type` + `key`. Build the key from the resource (id, plus `updated_at` when updates matter) so webhook and poll produce the same one. The last 10,000 keys are kept in memory (`remember`), so a restart can fire a change again.
 - Polling: `get` sends the last `ETag` back as `If-None-Match`. An unchanged response is a 304, which does not count against the rate limit, and returns the cached data. `since` is when the source's last successful poll started.
-- Webhooks: signatures are checked by [@octokit/webhooks](https://github.com/octokit/webhooks.js) against `secret`. `serve` starts a server on 127.0.0.1 and, given a smee.io channel, forwards its deliveries there with [smee-client](https://github.com/probot/smee-client). The repository needs a webhook pointing at that channel with the same secret. `receive` takes a delivery directly.
+- Webhooks: signatures are checked by [@octokit/webhooks](https://github.com/octokit/webhooks.js) against `secret`. `serve` starts a server on 127.0.0.1 and, given a smee.io channel, forwards its deliveries there with [smee-client](https://github.com/probot/smee-client). The repository needs a webhook pointing at that channel with the same secret. `receive` takes a delivery directly. `secret` is optional: without it the source only polls, and `receive` and `serve` reject.
 
 ### Pull requests
 
