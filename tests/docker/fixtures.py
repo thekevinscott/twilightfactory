@@ -1,6 +1,7 @@
 import base64
 import json
 import pathlib
+import urllib.request
 
 from mitmproxy import http
 
@@ -10,7 +11,8 @@ fixtures = {}
 logs = {}
 
 
-# A test names its fixture as the username in HTTPS_PROXY, and may name a request log as the password.
+# A test names its fixture as the username in HTTPS_PROXY. The password is either a request log name,
+# or `callback.<port>`: each request is then POSTed to that port on the test's own address as it arrives.
 def http_connect(flow):
     credentials = flow.request.headers.get("proxy-authorization")
     if credentials:
@@ -20,9 +22,17 @@ def http_connect(flow):
 
 
 def request(flow):
-    log = logs.get(flow.client_conn.id)
-    if log and log.isalnum():
-        entry = {"method": flow.request.method, "url": flow.request.pretty_url, "authorization": flow.request.headers.get("authorization"), "body": flow.request.get_text()}
+    log = logs.get(flow.client_conn.id) or ""
+    entry = {
+        "method": flow.request.method,
+        "url": flow.request.pretty_url,
+        "authorization": flow.request.headers.get("authorization"),
+        "body": flow.request.get_text(),
+    }
+    if log.startswith("callback."):
+        url = f"http://{flow.client_conn.peername[0]}:{log.removeprefix('callback.')}/"
+        urllib.request.urlopen(urllib.request.Request(url, data=json.dumps(entry).encode(), method="POST"), timeout=5)
+    elif log.isalnum():
         with open(REQUESTS / f"{log}.jsonl", "a") as out:
             out.write(json.dumps(entry) + "\n")
     fixture = fixtures.get(flow.client_conn.id)
