@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { Octokit } from "@octokit/rest";
 import { defineSource, type PollContext } from "./events.js";
 
 export interface PullRequest {
@@ -129,4 +130,28 @@ export const pullRequestEdited = () => {
       return changes;
     },
   });
+};
+
+const enableAutoMergeMutation = `
+mutation($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+  enablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId, mergeMethod: $mergeMethod }) {
+    pullRequest { number }
+  }
+}`;
+
+export type AutoMerge = "enabled" | "draft" | "already-enabled";
+
+// GitHub refuses auto-merge on drafts, so a draft is skipped rather than sent.
+export const enableAutoMerge = async (
+  github: Octokit,
+  { nodeId, draft }: Pick<PullRequest, "nodeId" | "draft">,
+): Promise<AutoMerge> => {
+  if (draft) return "draft";
+  try {
+    await github.graphql(enableAutoMergeMutation, { pullRequestId: nodeId, mergeMethod: "MERGE" });
+    return "enabled";
+  } catch (error) {
+    if (/already/i.test((error as Error).message)) return "already-enabled";
+    throw error;
+  }
 };
