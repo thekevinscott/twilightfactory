@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
+import { chatContext } from "./chat-context.js";
 import { stateDisplay } from "./footer.js";
 import { githubToken, NoClientIdError, type Verification } from "./token.js";
 
@@ -72,6 +73,8 @@ export default function (pi: ExtensionAPI) {
   let timer: NodeJS.Timeout | undefined;
   let events: gh.EventSource | undefined;
   const display = stateDisplay(pi);
+  let state: string | undefined;
+  chatContext(pi, { repo: githubRepo, github: async () => gh.client(await githubToken(() => {})), state: () => state });
 
   const signIn = (ctx: ExtensionContext) => ({ userCode, verificationUri }: Verification) => {
     ctx.ui.setWidget("tf-sign-in", [`Sign in to GitHub: enter ${userCode} at ${verificationUri}`]);
@@ -86,6 +89,7 @@ export default function (pi: ExtensionAPI) {
       text = `error: ${message(error)}`;
     }
     ctx.ui.setWidget("tf-sign-in", undefined);
+    state = text;
     display.show(text);
   };
 

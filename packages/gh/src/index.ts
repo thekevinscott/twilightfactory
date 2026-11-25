@@ -59,6 +59,8 @@ export const hasWorkflow = async (github: Octokit, repo: string): Promise<boolea
   }
 };
 
+export const recentRuns = (github: Octokit, repo: string, count = 10): Promise<Run[]> => runs(github, repo, count);
+
 export const lastRun = async (github: Octokit, repo: string): Promise<Run | null> =>
   (await runs(github, repo, 1))[0] ?? null;
 
@@ -160,3 +162,4 @@ export const confirmFix = async (github: Octokit, repo: string): Promise<Kind> =
 };
 export * from "./events.js";
 export * from "./pull-requests.js";
+export * from "./summaries.js";
