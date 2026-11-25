@@ -12,7 +12,6 @@ const poll = async (polls: number) => {
   const counter = gh.defineSource({ type: 'count', poll: async () => (++count >= polls && done(), []) });
   const events = gh.eventSource({
     github: gh.client('gho_gh', { request: { fetch: session.fetch } }),
-    secret: 'unused',
     repo,
     interval: 10,
     sources: [gh.pullRequestOpened(), gh.pullRequestEdited(), gh.pullRequestClosed(), counter],

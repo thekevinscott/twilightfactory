@@ -70,7 +70,7 @@ export const eventSource = ({
   const handlers = new Map<string, Handler[]>();
   const seen = new LRUCache<string, true>({ max: remember });
   const queue = new PQueue({ concurrency: 1 });
-  const webhooks = new Webhooks({ secret: secret ?? "" });
+  const webhooks = secret ? new Webhooks({ secret }) : undefined;
   const etags = new Map<string, { etag: string; data: unknown }>();
   const since = new Map<Source, Date>();
   let timer: NodeJS.Timeout | undefined;
@@ -114,8 +114,13 @@ export const eventSource = ({
     }
   };
 
+  const needWebhooks = (method: string) => {
+    if (!webhooks) throw new Error(`${method} needs a webhook secret`);
+    return webhooks;
+  };
+
   for (const source of sources) {
-    if (!source.webhook) continue;
+    if (!webhooks || !source.webhook) continue;
     const { event, changes } = source.webhook;
     webhooks.on(event, webhook => enqueue(source.type, "webhook", changes(webhook)));
   }
@@ -149,13 +154,12 @@ export const eventSource = ({
       await loop();
     },
 
-    // Rejects when the signature does not match `secret`.
-    receive: (delivery: { id: string; name: string; payload: string; signature: string }) =>
-      webhooks.verifyAndReceive(delivery),
+    // Rejects when the signature does not match `secret`, or when there is no `secret`.
+    receive: async (delivery: { id: string; name: string; payload: string; signature: string }) =>
+      needWebhooks("receive").verifyAndReceive(delivery),
 
     serve: async ({ port = 0, smee: channel }: ServeOptions = {}) => {
-      if (!secret) throw new Error("serve needs a webhook secret");
-      server = createServer(createNodeMiddleware(webhooks, { path: "/" }));
+      server = createServer(createNodeMiddleware(needWebhooks("serve"), { path: "/" }));
       await new Promise<void>(resolve => server!.listen(port, "127.0.0.1", resolve));
       const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/`;
       if (channel) {
