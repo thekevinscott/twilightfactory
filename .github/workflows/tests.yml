@@ -31,15 +31,14 @@ jobs:
           repository: thekevinscott/curtaincall
           ref: 38824c8e5e50fe0fb218c029eaa02682c20665b5 # main, after PR 57
           path: .deps/curtaincall
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12.16.1
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
       - uses: extractions/setup-just@v3
-      - run: pnpm install && pnpm run build
-        working-directory: .deps/curtaincall/packages/ts
-      - run: pnpm pkg set devDependencies.curtaincall=link:./.deps/curtaincall/packages/ts
-      - run: just install
+      # Install and build inside the test image: node-pty's native module must
+      # link against the container's glibc, not the runner's newer one.
+      - run: docker build -t tf-tests tests/docker
+      - run: |
+          docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" \
+            -e pnpm_config_frozen_lockfile tf-tests bash -euc '
+              (cd .deps/curtaincall/packages/ts; pnpm install; pnpm run build)
+              pnpm pkg set devDependencies.curtaincall=link:./.deps/curtaincall/packages/ts
+              just install'
       - run: just test
