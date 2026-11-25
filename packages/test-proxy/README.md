@@ -1,6 +1,6 @@
 # test-proxy
 
-An HTTPS proxy for tests whose code under test runs in a child process, so in-process mocks (nock, MSW) can't reach it. Built on [mockttp](https://github.com/httptoolkit/mockttp), which does the TLS interception and per-request events.
+An HTTPS proxy for tests whose code under test runs in a child process, so in-process mocks (nock, MSW) can't reach it. Code in the test's own process can use the same fixtures through `session.fetch`. Built on [mockttp](https://github.com/httptoolkit/mockttp), which does the TLS interception and per-request events.
 
 ```ts
 import { launch, startProxy } from "test-proxy";
@@ -9,6 +9,7 @@ const proxy = await startProxy();                   // { mode: "record", recordi
 const session = proxy.session("tests/fixtures/run"); // a fixture folder; each session sees only its own traffic
 launch(terminal, ["node", "cli.js"], session, { env: { GH_TOKEN: "x" } });
 const dispatch = await session.next(({ method }) => method === "POST");
+new Octokit({ request: { fetch: session.fetch } });  // in-process: undici's fetch, routed through the session
 session.requests;                                    // [{ method, url, authorization, body }]
 await proxy.stop();
 ```
