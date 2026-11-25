@@ -11,16 +11,13 @@ install:
     pnpm install --ignore-workspace
 
 lint:
-    cd packages/twilight-factory && pnpm run lint
+    pnpm run lint
 
 typecheck:
-    cd packages/twilight-factory && pnpm run typecheck
+    pnpm run typecheck
 
 build:
-    cd packages/test-proxy && pnpm run build
-    cd packages/state-machine && pnpm run build
-    cd packages/gh && pnpm run build
-    cd packages/twilight-factory && pnpm run build
+    pnpm run build
 
 # Tests always run in the container; this is the run inside it.
 [positional-arguments]

@@ -15,9 +15,9 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json --noEmit",
-    "test": "vitest run"
+    "build": "wireit",
+    "typecheck": "wireit",
+    "test": "wireit"
   },
   "files": [
     "dist/"
@@ -28,6 +28,47 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "typescript": "^5.9.3",
-    "vitest": "^5.1.1"
+    "vitest": "^5.1.1",
+    "wireit": "^0.15.0"
+  },
+  "wireit": {
+    "build": {
+      "command": "tsc -p tsconfig.json",
+      "files": [
+        "src/**/*.ts",
+        "!src/**/*.test.ts",
+        "tsconfig.json"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json --noEmit",
+      "files": [
+        "src/**/*.ts",
+        "tests/**/*.ts",
+        "tsconfig.json",
+        "tests/tsconfig.json"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "test": {
+      "command": "vitest run",
+      "files": [
+        "src/**/*.ts",
+        "tests/**/*.ts"
+      ],
+      "output": [],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
   }
 }
