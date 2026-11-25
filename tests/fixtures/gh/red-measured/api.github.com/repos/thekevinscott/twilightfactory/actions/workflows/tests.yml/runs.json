@@ -1,0 +1,32 @@
+{
+  "total_count": 3,
+  "workflow_runs": [
+    {
+      "id": 43,
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-11-24T43:00:00Z",
+      "head_sha": "abcdef0123456789",
+      "display_title": "Tests (plain)",
+      "html_url": "https://github.com/thekevinscott/twilightfactory/actions/runs/43"
+    },
+    {
+      "id": 42,
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-24T42:00:00Z",
+      "head_sha": "abcdef0123456789",
+      "display_title": "Tests (measured)",
+      "html_url": "https://github.com/thekevinscott/twilightfactory/actions/runs/42"
+    },
+    {
+      "id": 41,
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-24T41:00:00Z",
+      "head_sha": "abcdef0123456789",
+      "display_title": "Tests (plain)",
+      "html_url": "https://github.com/thekevinscott/twilightfactory/actions/runs/41"
+    }
+  ]
+}

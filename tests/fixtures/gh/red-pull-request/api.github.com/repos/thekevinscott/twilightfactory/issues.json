@@ -1,0 +1,14 @@
+[
+  {
+    "number": 8,
+    "title": "Fix the red test",
+    "labels": [
+      {
+        "name": "red"
+      }
+    ],
+    "pull_request": {
+      "url": "https://api.github.com/repos/thekevinscott/twilightfactory/pulls/8"
+    }
+  }
+]

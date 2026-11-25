@@ -1,0 +1,23 @@
+{
+  "total_count": 2,
+  "workflow_runs": [
+    {
+      "id": 31,
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-24T31:00:00Z",
+      "head_sha": "abcdef0123456789",
+      "display_title": "Tests (plain)",
+      "html_url": "https://github.com/thekevinscott/twilightfactory/actions/runs/31"
+    },
+    {
+      "id": 30,
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-24T30:00:00Z",
+      "head_sha": "abcdef0123456789",
+      "display_title": "Tests (plain)",
+      "html_url": "https://github.com/thekevinscott/twilightfactory/actions/runs/30"
+    }
+  ]
+}
