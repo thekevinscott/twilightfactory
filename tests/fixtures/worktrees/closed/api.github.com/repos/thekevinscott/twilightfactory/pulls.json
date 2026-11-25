@@ -1,0 +1,86 @@
+[
+  {
+    "number": 41,
+    "node_id": "PR_node41",
+    "title": "Closed unmerged",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/41",
+    "draft": false,
+    "user": {
+      "login": "thekevinbot"
+    },
+    "head": {
+      "ref": "unmerged"
+    },
+    "base": {
+      "ref": "main"
+    },
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2099-01-01T00:00:00Z",
+    "closed_at": "2099-01-01T00:00:00Z",
+    "merged_at": null
+  },
+  {
+    "number": 42,
+    "node_id": "PR_node42",
+    "title": "Closed dirty",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/42",
+    "draft": false,
+    "user": {
+      "login": "thekevinbot"
+    },
+    "head": {
+      "ref": "dirty"
+    },
+    "base": {
+      "ref": "main"
+    },
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2099-01-01T00:00:00Z",
+    "closed_at": "2099-01-01T00:00:00Z",
+    "merged_at": "2099-01-01T00:00:00Z"
+  },
+  {
+    "number": 43,
+    "node_id": "PR_node43",
+    "title": "Closed busy",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/43",
+    "draft": false,
+    "user": {
+      "login": "thekevinbot"
+    },
+    "head": {
+      "ref": "busy"
+    },
+    "base": {
+      "ref": "main"
+    },
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2099-01-01T00:00:00Z",
+    "closed_at": "2099-01-01T00:00:00Z",
+    "merged_at": "2099-01-01T00:00:00Z"
+  },
+  {
+    "number": 44,
+    "node_id": "PR_node44",
+    "title": "Closed merged",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/44",
+    "draft": false,
+    "user": {
+      "login": "thekevinbot"
+    },
+    "head": {
+      "ref": "merged"
+    },
+    "base": {
+      "ref": "main"
+    },
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2099-01-01T00:00:00Z",
+    "closed_at": "2099-01-01T00:00:00Z",
+    "merged_at": "2099-01-01T00:00:00Z"
+  }
+]
