@@ -37,13 +37,13 @@ export const stateDisplay = (_pi: ExtensionAPI) => {
         return {
           invalidate() {},
           render(width: number): string[] {
-            const status = `${label(state)}  `;
+            const status = `${label(state)}    `;
             const model = ctx.model?.id ?? "";
-            const room = width - visibleWidth(status) - visibleWidth(model) - 1;
+            const room = width - visibleWidth(status) - visibleWidth(model) - 3;
             const cwd = truncateLeft(ctx.cwd.replace(process.env.HOME ?? "\0", "~"), room);
             const left = status + theme.fg("dim", cwd);
             const right = theme.fg("dim", model);
-            const pad = " ".repeat(Math.max(1, width - visibleWidth(left) - visibleWidth(right)));
+            const pad = " ".repeat(Math.max(3, width - visibleWidth(left) - visibleWidth(right)));
             return [truncateToWidth(left + pad + right, width)];
           },
         };
