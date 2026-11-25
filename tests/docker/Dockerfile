@@ -1,6 +1,6 @@
 FROM node:24-trixie-slim
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates fd-find gh git just ripgrep \
+  && apt-get install -y --no-install-recommends ca-certificates fd-find g++ gh git just make python3 ripgrep \
   && ln -s /usr/bin/fdfind /usr/local/bin/fd \
   && rm -rf /var/lib/apt/lists/*
 ENV PNPM_HOME=/opt/pnpm
