@@ -37,3 +37,12 @@ await events.stop();                                  // stop polling and servin
 - Dedupe: an event fires once per `type` + `key`. Build the key from the resource (id, plus `updated_at` when updates matter) so webhook and poll produce the same one. The last 10,000 keys are kept in memory (`remember`), so a restart can fire a change again.
 - Polling: `get` sends the last `ETag` back as `If-None-Match`. An unchanged response is a 304, which does not count against the rate limit, and returns the cached data. `since` is when the source's last successful poll started.
 - Webhooks: signatures are checked by [@octokit/webhooks](https://github.com/octokit/webhooks.js) against `secret`. `serve` starts a server on 127.0.0.1 and, given a smee.io channel, forwards its deliveries there with [smee-client](https://github.com/probot/smee-client). The repository needs a webhook pointing at that channel with the same secret. `receive` takes a delivery directly.
+
+### Pull requests
+
+`pullRequestOpened()`, `pullRequestEdited()` and `pullRequestClosed()` make sources of type `pull_request.opened`, `pull_request.edited` and `pull_request.closed`. Each call makes a fresh source; give each `eventSource` its own.
+
+- Data: `{ number, nodeId, title, url, draft, author, head, base }`; closed adds `merged`.
+- Keys: opened `<number>`, closed `<number>:<closed_at>`, edited `<number>:<hash of title, body, base>`.
+- Poll: lists pulls by `updated` and reads opened from `created_at` and closed from `closed_at`, both at or after `since` (less a minute for clock skew). Edited is a change in title, body or base from the last poll.
+- The first poll after `start` fires nothing and records a baseline, so a restart does not replay every pull request. Changes made while nothing was running are missed.
