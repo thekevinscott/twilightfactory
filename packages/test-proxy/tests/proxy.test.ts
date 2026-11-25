@@ -122,6 +122,22 @@ describe("startProxy", () => {
     expect((await session.next(({ url }) => url.endsWith("/a/b"))).method).toBe("GET");
   });
 
+  test("session.fetch reaches the fixture over HTTPS in-process and logs to the session", async () => {
+    const session = proxy.session(dir);
+    const other = proxy.session(fixtureFolder({ "api.github.com/repos/a/b.json": '{"name":"other"}' }));
+    const response = await session.fetch("https://api.github.com/repos/a/b/dispatches", {
+      method: "POST",
+      body: '{"ref":"main"}',
+      headers: { authorization: "token gho_test" },
+    });
+    expect(response.status).toBe(204);
+    expect(await (await other.fetch("https://api.github.com/repos/a/b")).text()).toBe('{"name":"other"}');
+    expect(session.requests).toEqual([
+      { method: "POST", url: "https://api.github.com/repos/a/b/dispatches", authorization: "token gho_test", body: '{"ref":"main"}' },
+    ]);
+    expect(other.requests.map(({ url }) => url)).toEqual(["https://api.github.com/repos/a/b"]);
+  });
+
   test("launch runs the command with the session's proxy env", async () => {
     const session = proxy.session(dir);
     const calls: [string, { env: Record<string, string>; cols?: number }][] = [];

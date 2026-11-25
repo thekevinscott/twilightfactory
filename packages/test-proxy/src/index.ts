@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFil
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { generateCACertificate, getLocal, type CompletedRequest } from "mockttp";
+import { fetch as undiciFetch, ProxyAgent } from "undici";
 
 export interface Request {
   method: string;
@@ -15,6 +16,8 @@ export interface Session {
   id: string;
   /** Proxy and CA variables for a child process. */
   env: Record<string, string>;
+  /** A fetch routed through this session, for code under test that runs in the test's own process. */
+  fetch: typeof undiciFetch;
   requests: Request[];
   next: (match: (request: Request) => boolean) => Promise<Request>;
 }
@@ -101,6 +104,7 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
     });
   }
 
+  const agents: ProxyAgent[] = [];
   const session = (fixture?: string, id: string = randomUUID()) => {
     const existing = sessions.get(id);
     if (existing) {
@@ -109,6 +113,11 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
     }
     const metadata = Buffer.from(JSON.stringify({ tags: [id] })).toString("base64url");
     const proxyUrl = `http://metadata:${metadata}@127.0.0.1:${server.port}`;
+    let agent: ProxyAgent | undefined;
+    const dispatcher = () => {
+      if (!agent) agents.push((agent = new ProxyAgent({ uri: proxyUrl, requestTls: { ca: ca.cert } })));
+      return agent;
+    };
     const state: State = {
       id,
       fixture,
@@ -119,6 +128,8 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
         NODE_EXTRA_CA_CERTS: caFile,
         SSL_CERT_FILE: caFile,
       },
+      // undici's own fetch: the global one is a separately bundled undici and may reject this agent.
+      fetch: (input, init) => undiciFetch(input, { ...init, dispatcher: dispatcher() }),
       requests: [],
       waiting: [],
       next: (match) => new Promise((resolve) => {
@@ -131,7 +142,11 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
     return state;
   };
 
-  return { url, caFile, session, stop: () => server.stop() };
+  const stop = async () => {
+    await Promise.all(agents.map((agent) => agent.close()));
+    await server.stop();
+  };
+  return { url, caFile, session, stop };
 };
 
 /** Runs `command` through a terminal factory (e.g. curtaincall's) with the session's proxy env. */
