@@ -4,6 +4,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { stateDisplay } from "./footer.js";
+import { showSpikeUI } from "./spike.js";
 import { githubToken, NoClientIdError, type Verification } from "./token.js";
 
 const REFRESH_MS = 60 * 1000;
@@ -70,6 +71,7 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     display.attach(ctx);
+    showSpikeUI(ctx);
     void show(ctx);
     timer = setInterval(() => void show(ctx), REFRESH_MS);
   });
