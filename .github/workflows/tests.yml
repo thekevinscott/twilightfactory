@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: thekevinscott/curtaincall
-          ref: b651d56a1f06074be242a16d6bf66250be486f46 # feat/typescript-port
+          ref: 38824c8e5e50fe0fb218c029eaa02682c20665b5 # main, after PR 57
           path: .deps/curtaincall
       - uses: actions/checkout@v4
         with:

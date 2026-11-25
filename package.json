@@ -4,7 +4,7 @@
   "type": "module",
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "curtaincall": "link:/home/duncan/work/code/projects/developer-tooling/curtaincall/.worktrees/ts-port/packages/ts",
+    "curtaincall": "link:/home/duncan/work/code/projects/developer-tooling/curtaincall/packages/ts",
     "twilight-state-machine": "link:./packages/state-machine",
     "vitest": "^5.1.1"
   }
