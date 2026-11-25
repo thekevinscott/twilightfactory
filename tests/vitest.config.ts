@@ -5,6 +5,6 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts", "packages/test-proxy/tests/**/*.test.ts"],
     setupFiles: [fileURLToPath(new URL("./setup.ts", import.meta.url))],
-    testTimeout: 15_000,
+    testTimeout: 10_000,
   },
 });
