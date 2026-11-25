@@ -159,3 +159,4 @@ export const confirmFix = async (github: Octokit, repo: string): Promise<Kind> =
   return kind;
 };
 export * from "./events.js";
+export * from "./pull-requests.js";
