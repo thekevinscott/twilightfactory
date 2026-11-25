@@ -16,7 +16,7 @@ const start = (terminal, fixture: string, env: Record<string, string> = { GH_TOK
 
 const shows = async (terminal, fixture: string, status: RegExp, env?: Record<string, string>) => {
   const term = start(terminal, fixture, env);
-  await expectTerminal(term.getByText(status)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText(status)).toBeVisible();
   return term;
 };
 ```

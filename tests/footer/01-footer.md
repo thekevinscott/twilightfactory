@@ -12,7 +12,7 @@ const start = (terminal, fixture: string, env: Record<string, string> = { GH_TOK
 
 const shows = async (terminal, fixture: string, status: RegExp, env?: Record<string, string>) => {
   const term = start(terminal, fixture, env);
-  await expectTerminal(term.getByText(status)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText(status)).toBeVisible();
   return term;
 };
 ```
@@ -43,7 +43,7 @@ test(title, async ({ terminal }) => {
     cols: 300,
     env: { GH_TOKEN: 'gho_footer', HTTPS_PROXY: `http://${encodeURIComponent('tests/fixtures/state/tests-due')}:footer@proxy:8080` },
   });
-  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible();
   await expectTerminal(term.getByText(/🔵.*\(\S+\)/)).notToBeVisible();
 });
 ```
@@ -56,7 +56,7 @@ test(title, async ({ terminal }) => {
     cols: 300,
     env: { GH_TOKEN: 'gho_footer', HTTPS_PROXY: `http://${encodeURIComponent('tests/fixtures/state/tests-due')}:footer@proxy:8080` },
   });
-  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible();
   await expectTerminal(term.getByText('claude-opus-5-5')).toBeVisible();
 });
 ```
@@ -79,7 +79,7 @@ test(title, async ({ terminal }) => {
     cols: 300,
     env: { GH_TOKEN: 'gho_footer', HTTPS_PROXY: `http://${encodeURIComponent('tests/fixtures/state/tests-due')}:footer@proxy:8080` },
   });
-  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible();
   await expectTerminal(term.getByText(process.cwd().replace(process.env.HOME ?? '\0', '~'))).toBeVisible();
   await expectTerminal(term.getByText('...')).notToBeVisible();
 });
@@ -93,7 +93,7 @@ test(title, async ({ terminal }) => {
     cols: 50,
     env: { GH_TOKEN: 'gho_footer', HTTPS_PROXY: `http://${encodeURIComponent('tests/fixtures/state/tests-due')}:footer@proxy:8080` },
   });
-  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible({ timeout: 10_000 });
+  await expectTerminal(term.getByText(/🔵\s+tests due/)).toBeVisible();
   await expectTerminal(term.getByText(new RegExp(`\\.\\.\\.\\S*/${path.basename(process.cwd())} `))).toBeVisible();
 });
 ```
