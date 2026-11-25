@@ -1,47 +1,20 @@
 # NETWORK picks what the tests reach: replay (each test's fixture folder, no internet),
 # record (the internet, JSON responses saved to recordings/), live (the internet, nothing saved).
+# The proxy runs inside each test file (packages/test-proxy).
 services:
-  proxy:
-    image: mitmproxy/mitmproxy:12.3.1
-    user: "${HOST_UID}:${HOST_GID}"
-    environment:
-      HOME: /tmp/home
-    entrypoint: ["sh", "/proxy/proxy.sh", "${NETWORK:-replay}"]
-    volumes:
-      - .:/proxy
-      - ../..:/worktree:ro
-      - ./.proxy:/tmp/home/.mitmproxy
-    networks: [sealed, "${EGRESS}"]
-    healthcheck:
-      test: ["CMD", "test", "-f", "/tmp/home/.mitmproxy/mitmproxy-ca-cert.pem"]
-      interval: 1s
-      retries: 30
-
   tests:
     build: .
     user: "${HOST_UID}:${HOST_GID}"
-    depends_on:
-      proxy:
-        condition: service_healthy
     working_dir: ${WORKTREE}
     environment:
-      HTTPS_PROXY: http://proxy:8080
-      HTTP_PROXY: http://proxy:8080
-      SSL_CERT_FILE: /ca/mitmproxy-ca-cert.pem
-      NODE_EXTRA_CA_CERTS: /ca/mitmproxy-ca-cert.pem
-      NODE_USE_ENV_PROXY: "1"
+      NETWORK: ${NETWORK:-replay}
       pnpm_config_verify_deps_before_run: "false"
-      PROXY_REQUESTS: /requests
     volumes:
       - ${REPOSITORY}:${REPOSITORY}
       - ${CURTAINCALL}:${CURTAINCALL}:ro
-      - ./.proxy:/ca:ro
-      - ./.requests:/requests:ro
-    networks: [sealed]
+    networks: ["${EGRESS}"]
 
 networks:
-  sealed:
-    internal: true
   internet: {}
   nowhere:
     internal: true

@@ -1,0 +1,5 @@
+packages:
+  - "."
+# Ships prebuilt binaries; mockttp only uses it for TLS fingerprinting on passthrough.
+allowBuilds:
+  tls-impersonate: false
