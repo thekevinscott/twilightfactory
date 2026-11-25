@@ -1,0 +1,22 @@
+diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
+index cbd936501adcf0663f06ab29c1e5466207350f64..6339a5b2884fe80244b4a35f53ec817f7caba0eb 100644
+--- a/dist/modes/interactive/interactive-mode.js
++++ b/dist/modes/interactive/interactive-mode.js
+@@ -177,6 +177,8 @@ function quoteIfNeeded(value) {
+     return `'${value.replace(/'/g, `'\\''`)}'`;
+ }
+ export function formatResumeCommand(sessionManager) {
++    // twilightfactory: tf has no --session, so never suggest `pi --session`.
++    return undefined;
+     if (!process.stdout.isTTY)
+         return undefined;
+     if (!sessionManager.isPersisted())
+@@ -1835,7 +1837,7 @@ export class InteractiveMode {
+         const resumeCommand = formatResumeCommand(this.sessionManager);
+         const restart = resumeCommand
+             ? `Restart with \`${resumeCommand}\` to continue this session.`
+-            : `Restart ${APP_NAME}.`;
++            : `Restart tf.`;
+         this.showWarning(`${cause}. Features that load code on demand can fail until restart. ${restart}`);
+         return true;
+     }
