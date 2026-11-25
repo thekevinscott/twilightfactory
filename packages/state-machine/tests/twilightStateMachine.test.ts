@@ -2,11 +2,12 @@ import { expect, test } from "vitest";
 import { type Run, type State, twilightStateMachine } from "../src/index.js";
 
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60 * 1000).toISOString();
-const run = (status: string, conclusion: string, minutes: number, headSha: string): Run => ({
+const run = (status: string, conclusion: string, minutes: number, headSha: string, displayTitle = "Tests (plain)"): Run => ({
   status,
   conclusion,
   createdAt: minutesAgo(minutes),
   headSha,
+  displayTitle,
 });
 const HOURS = 60;
 
@@ -47,24 +48,34 @@ const cases: Case[] = [
 
   // A run is underway
   {
-    name: "a run is queued",
+    name: "a plain run is queued",
     inputs: { lastRun: run("queued", "", 1, "aaa"), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "QUIET", fetched: ["lastRun"] },
+    outputs: { state: "RUNNING_PLAIN", fetched: ["lastRun"] },
   },
   {
-    name: "a run is in progress",
+    name: "a plain run is in progress",
     inputs: { lastRun: run("in_progress", "", 30, "aaa"), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "QUIET", fetched: ["lastRun"] },
+    outputs: { state: "RUNNING_PLAIN", fetched: ["lastRun"] },
+  },
+  {
+    name: "a measured run is in progress",
+    inputs: { lastRun: run("in_progress", "", 30, "aaa", "Tests (measured)"), lastMeasuredRun: measured25h, head: "bbb" },
+    outputs: { state: "RUNNING_MEASURED", fetched: ["lastRun"] },
+  },
+  {
+    name: "a measured run is queued",
+    inputs: { lastRun: run("queued", "", 1, "aaa", "Tests (measured)"), lastMeasuredRun: measured25h, head: "bbb" },
+    outputs: { state: "RUNNING_MEASURED", fetched: ["lastRun"] },
   },
   {
     name: "a run has been in progress for two hours",
     inputs: { lastRun: run("in_progress", "", 2 * HOURS, "aaa"), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "QUIET", fetched: ["lastRun"] },
+    outputs: { state: "RUNNING_PLAIN", fetched: ["lastRun"] },
   },
   {
     name: "a run is in progress, a pull request is blocked",
     inputs: { lastRun: run("in_progress", "", 30, "aaa"), lastMeasuredRun: measured25h, head: "bbb", blockedPullRequests: 2 },
-    outputs: { state: "QUIET", fetched: ["lastRun"] },
+    outputs: { state: "RUNNING_PLAIN", fetched: ["lastRun"] },
   },
 
   // Red

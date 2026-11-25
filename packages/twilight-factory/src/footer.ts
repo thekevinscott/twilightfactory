@@ -5,6 +5,8 @@ const labels: Record<string, [dot: string, text: string]> = {
   "…": ["⚪", "checking"],
   NOT_SET_UP: ["⚪", "not set up"],
   QUIET: ["🟢", "all quiet"],
+  RUNNING_PLAIN: ["🔵", "behavioral tests running"],
+  RUNNING_MEASURED: ["🔵", "measured tests running"],
   FIXING: ["🔴", "fixing"],
   GO_PLAIN: ["🔵", "tests due"],
   GO_MEASURED: ["🔵", "tests due"],
