@@ -81,9 +81,9 @@ export interface PullRequestStatus {
   state: "open" | "merged" | "closed";
 }
 
-const CLOSED_SHOWN = 5;
-// GitHub can't sort by close time, so read a margin of recently updated ones and sort those.
-const CLOSED_SCANNED = 30;
+const MERGED_SHOWN = 5;
+// GitHub can't filter closed pull requests to merged ones or sort by merge time, so read a wide margin and sort those.
+const CLOSED_SCANNED = 100;
 
 export const recentPullRequests = async (github: Octokit, repo: string): Promise<PullRequestStatus[]> => {
   const [open, closed] = await Promise.all([
@@ -97,11 +97,11 @@ export const recentPullRequests = async (github: Octokit, repo: string): Promise
     draft: pr.draft ?? false,
     state: pr.closed_at === null ? "open" : pr.merged_at === null ? "closed" : "merged",
   });
-  const recentlyClosed = closed.data
-    .filter(pr => pr.closed_at !== null)
-    .sort((a, b) => Date.parse(b.closed_at!) - Date.parse(a.closed_at!))
-    .slice(0, CLOSED_SHOWN);
-  return [...open.data.filter(pr => pr.closed_at === null), ...recentlyClosed].map(status);
+  const recentlyMerged = closed.data
+    .filter(pr => pr.merged_at !== null)
+    .sort((a, b) => Date.parse(b.merged_at!) - Date.parse(a.merged_at!))
+    .slice(0, MERGED_SHOWN);
+  return [...open.data.filter(pr => pr.closed_at === null), ...recentlyMerged].map(status);
 };
 
 const isRed = (run: Run) => run.status === "completed" && run.conclusion !== "success";

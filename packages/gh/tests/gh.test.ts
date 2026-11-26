@@ -195,9 +195,9 @@ const fakePulls = (open: unknown[], closed: unknown[]) => {
   return { github: gh.client("token", { request: { fetch } }), requests };
 };
 
-test("recentPullRequests lists every open pull request, then the 5 most recently closed", async () => {
+test("recentPullRequests lists every open pull request, then the 5 most recently merged", async () => {
   const day = (n: number) => `2026-11-${String(n).padStart(2, "0")}T00:00:00Z`;
-  // Sorted by last update, which is not the order they closed in.
+  // Sorted by last update, which is not the order they closed in. 11, 14, 16 and 18 closed without merging.
   const closed = [
     apiPull(10, day(10), true),
     apiPull(11, day(20)),
@@ -206,20 +206,23 @@ test("recentPullRequests lists every open pull request, then the 5 most recently
     apiPull(14, day(1)),
     apiPull(15, day(15), true),
     apiPull(16, day(16)),
+    apiPull(17, day(9), true),
+    apiPull(18, day(18)),
+    apiPull(19, day(8), true),
   ];
   const { github, requests } = fakePulls([apiPull(1), apiPull(2), apiPull(3)], closed);
   expect(await gh.recentPullRequests(github, repo)).toEqual([
     statusOf(1, "open"),
     statusOf(2, "open"),
     statusOf(3, "open"),
-    statusOf(11, "closed"),
-    statusOf(16, "closed"),
     statusOf(15, "merged"),
     statusOf(13, "merged"),
     statusOf(12, "merged"),
+    statusOf(10, "merged"),
+    statusOf(17, "merged"),
   ]);
   expect(requests.sort()).toEqual([
-    `${api}/repos/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=30`,
+    `${api}/repos/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100`,
     `${api}/repos/${repo}/pulls?state=open&per_page=100`,
   ]);
 });
