@@ -7,12 +7,12 @@ const require = createRequire(import.meta.url);
 export const registerAgent = (
   pi: ExtensionAPI,
   name: string,
-  { description, systemPrompt }: { description: string; systemPrompt: string },
+  { description, systemPrompt, model }: { description: string; systemPrompt: string; model?: string },
 ): { dispose: () => void } => {
   const request: {
     version: 1;
     name: string;
-    definition: { description: string; systemPrompt: string; extensions: string[] };
+    definition: { description: string; systemPrompt: string; extensions: string[]; model?: string };
     result?: { ok: true; registration: { dispose: () => void } } | { ok: false; error: Error };
   } = {
     version: 1,
@@ -22,6 +22,7 @@ export const registerAgent = (
       systemPrompt,
       // Background children load only these extensions; the parent's claude-bridge model resolves through it.
       extensions: [require.resolve("pi-claude-bridge/src/index.ts")],
+      ...(model ? { model } : {}),
     },
   };
   pi.events.emit("pi-subagents:runtime-agent-register:v1", request);

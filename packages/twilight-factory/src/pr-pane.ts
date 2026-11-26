@@ -1,5 +1,5 @@
 import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth, type OverlayHandle, type TUI } from "@earendil-works/pi-tui";
+import { Key, matchesKey, truncateToWidth, type KeyId, type OverlayHandle, type TUI } from "@earendil-works/pi-tui";
 import type { PullRequestStatus } from "twilight-gh";
 
 // Chat keeps this many rows (about three turns); the pane gets what is left above it.
@@ -11,16 +11,23 @@ const MIN_PANE_ROWS = 4;
 
 const paneRows = (terminalRows: number) => Math.max(MIN_PANE_ROWS, terminalRows - CONVERSATION_ROWS - CHROME_ROWS);
 
+// Free in Pi's built-in keybindings on every platform.
+export const PANE_KEY: KeyId = "alt+r";
+
 const stateColor = { open: "accent", merged: "success", closed: "error" } as const;
 
-const rows = (pulls: PullRequestStatus[], theme: Theme, max: number): string[] => {
+const shownPulls = (pulls: PullRequestStatus[], max: number) =>
+  pulls.length > max ? pulls.slice(0, max - 1) : pulls;
+
+const rows = (pulls: PullRequestStatus[], theme: Theme, max: number, selected: number | undefined, width: number): string[] => {
   const numberWidth = Math.max(...pulls.map(pr => `#${pr.number}`.length));
-  const shown = pulls.length > max ? pulls.slice(0, max - 1) : pulls;
+  const shown = shownPulls(pulls, max);
   const lines = shown.map(pr => {
     const number = theme.fg("dim", `#${pr.number}`.padEnd(numberWidth));
     const state = theme.fg(stateColor[pr.state], pr.state.padEnd(6));
     const draft = pr.draft ? theme.fg("dim", " (draft)") : "";
-    return ` ${number}  ${state}  ${pr.title}${draft}`;
+    const line = ` ${number}  ${state}  ${pr.title}${draft}`;
+    return pr.number === selected ? theme.inverse(truncateToWidth(line, width, undefined, true)) : line;
   });
   if (shown.length < pulls.length) { lines.push(theme.fg("dim", ` +${pulls.length - shown.length} more`)); }
   return lines;
@@ -34,10 +41,25 @@ export const pullRequestPane = () => {
   let tui: TUI | undefined;
   let handle: OverlayHandle | undefined;
   let close: (() => void) | undefined;
+  // By number, so the highlight follows the pull request across refreshes.
+  let selected: number | undefined;
+
+  const focused = () => handle?.isFocused() ?? false;
+  const shown = () => shownPulls(pulls, paneRows(tui?.terminal.rows ?? 0) - 1);
+  const move = (step: number) => {
+    const visible = shown();
+    const index = visible.findIndex(pr => pr.number === selected);
+    selected = visible[Math.min(Math.max(index + step, 0), visible.length - 1)]?.number;
+    tui?.requestRender();
+  };
 
   const empty = () => pulls.length === 0 && error === undefined;
   const render = (width: number, height: number, theme: Theme) => {
-    const lines = error === undefined ? rows(pulls, theme, paneRows(height) - 1) : [theme.fg("error", ` pull requests: ${error}`)];
+    const highlight = focused() ? selected : undefined;
+    const lines =
+      error === undefined
+        ? rows(pulls, theme, paneRows(height) - 1, highlight, width)
+        : [theme.fg("error", ` pull requests: ${error}`)];
     return [...lines, theme.fg("borderMuted", "─".repeat(width))].map(line => truncateToWidth(line, width));
   };
   const update = () => {
@@ -61,6 +83,15 @@ export const pullRequestPane = () => {
             invalidate() {
               // Rendering reads live state; nothing is cached.
             },
+            handleInput(data: string) {
+              if (matchesKey(data, Key.up)) {
+                move(-1);
+              } else if (matchesKey(data, Key.down)) {
+                move(1);
+              } else if (matchesKey(data, Key.escape) || matchesKey(data, PANE_KEY)) {
+                handle?.unfocus();
+              }
+            },
             render: (width: number) => render(width, ui.terminal.rows, theme),
           };
         },
@@ -73,6 +104,20 @@ export const pullRequestPane = () => {
           },
         },
       );
+    },
+    // Pi only runs extension shortcuts from the input box, so the pane handles the key itself while focused.
+    toggle: () => {
+      if (!handle) {
+        return;
+      }
+      if (focused()) {
+        handle.unfocus();
+      } else {
+        if (shown().every(pr => pr.number !== selected)) {
+          selected = shown()[0]?.number;
+        }
+        handle.focus();
+      }
     },
     show: (next: PullRequestStatus[]) => {
       pulls = next;

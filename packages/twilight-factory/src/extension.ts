@@ -6,7 +6,7 @@ import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { chatContext } from "./chat-context.js";
 import { stateDisplay } from "./footer.js";
 import { registerConflictResolver, startConflictResolver } from "./conflict-resolver.js";
-import { pullRequestPane } from "./pr-pane.js";
+import { PANE_KEY, pullRequestPane } from "./pr-pane.js";
 import { registerRedFixer, startRedFixer } from "./red-fixer.js";
 import { appConfigFile, githubToken, NoClientIdError, type Verification } from "./token.js";
 import { removeMergedWorktree } from "./worktrees.js";
@@ -105,6 +105,7 @@ export default function tfExtension(pi: ExtensionAPI) {
   let agents: { dispose: () => void }[] = [];
   const display = stateDisplay(pi);
   const pane = pullRequestPane();
+  pi.registerShortcut(PANE_KEY, { description: "Focus the pull request pane", handler: pane.toggle });
   let state: string | undefined;
   chatContext(pi, { repo: githubRepo, github: async () => gh.client(await githubToken(() => undefined)), state: () => state });
 
