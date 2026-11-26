@@ -20,6 +20,13 @@ just test tests/specs/twilight-factory/basic.test.ts
 
 Lint and typecheck locally are fine.
 
+## Lint
+
+`just install` sets up a pre-commit hook (lefthook) that runs Biome with every rule on over the staged files. CI runs the same lint on the whole repo.
+
+- Never skip the hook: no `git commit --no-verify`, no `LEFTHOOK=0`. Fix the finding instead.
+- To turn a rule off, do it in `biome.jsonc` with a one-line reason. For one site, use `// biome-ignore lint/<group>/<rule>: <reason>`.
+
 ## Pull requests
 
 Agents merge their own PRs once CI is green.
