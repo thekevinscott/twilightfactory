@@ -52,28 +52,77 @@ const reasonToKeep = async (main: string, { path: dir, branch }: Worktree & { br
   if (pid !== undefined) { return `a process is running in it (pid ${pid})`; }
 };
 
-// Returns a line to show, or undefined when the branch has no worktree under .worktrees/.
-export const removeMergedWorktree = async (cwd: string, branch: string): Promise<string | undefined> => {
-  const [main, ...rest] = await worktrees(cwd);
-  const root = path.join(main!.path, ".worktrees");
-  const worktree = rest.find(w => w.branch === branch && inside(root, w.path));
-  if (!worktree) { return undefined; }
-  const name = path.relative(main!.path, worktree.path);
+const succeeds = (cwd: string, ...args: string[]) => git(cwd, ...args).then(() => true, () => false);
 
-  // Brings in the merge, so `git branch -d` sees the branch as merged into its upstream.
-  await git(main!.path, "fetch", "origin").catch(() => undefined);
+export interface ClosedPullRequest {
+  number: number;
+  merged: boolean;
+}
 
-  const reason = await reasonToKeep(main!.path, { path: worktree.path, branch });
+// Why a worktree may go: its newest pull request closed, or its pushed branch is already in main.
+// A branch never pushed is someone's new work, even when it still points at main.
+const done = async (main: string, branch: string, pr: ClosedPullRequest | undefined) => {
+  if (pr) { return { label: `#${pr.number} ${pr.merged ? "merged" : "closed"}`, merged: pr.merged }; }
+  const pushed = await succeeds(main, "rev-parse", "--verify", "--quiet", `refs/remotes/origin/${branch}`);
+  if (pushed && (await succeeds(main, "merge-base", "--is-ancestor", `refs/heads/${branch}`, "refs/remotes/origin/main"))) {
+    return { label: `${branch} merged into main`, merged: true };
+  }
+};
+
+const remove = async (main: string, worktree: Worktree & { branch: string }, merged: boolean) => {
+  const name = path.relative(main, worktree.path);
+  const reason = await reasonToKeep(main, worktree);
   if (reason) { return `kept ${name}: ${reason}`; }
   try {
-    await git(main!.path, "worktree", "remove", worktree.path);
+    await git(main, "worktree", "remove", worktree.path);
   } catch (error) {
     return `kept ${name}: ${failure(error)}`;
   }
   try {
-    await git(main!.path, "branch", "-d", branch);
+    // reasonToKeep has checked that every commit is on the remote, so a closed branch can go unmerged.
+    await git(main, "branch", merged ? "-d" : "-D", worktree.branch);
   } catch (error) {
-    return `removed ${name}, kept branch ${branch}: ${failure(error)}`;
+    return `removed ${name}, kept branch ${worktree.branch}: ${failure(error)}`;
   }
-  return `removed ${name} and branch ${branch}`;
+  return `removed ${name} and branch ${worktree.branch}`;
 };
+
+let queue: Promise<unknown> = Promise.resolve();
+const serially = <T>(task: () => Promise<T>): Promise<T> => {
+  const next = queue.then(task, task);
+  queue = next.catch(() => null);
+  return next;
+};
+
+// `closed` maps a branch to its newest pull request, when that one is closed. Branches with an open one are absent.
+export const sweepWorktrees = (cwd: string, closed: Map<string, ClosedPullRequest>): Promise<string[]> =>
+  serially(async () => {
+    const [main, ...rest] = await worktrees(cwd);
+    const root = path.join(main!.path, ".worktrees");
+    // Brings in merges, so `git branch -d` sees a branch as merged into its upstream.
+    await git(main!.path, "fetch", "origin").catch(() => undefined);
+    const lines: string[] = [];
+    for (const worktree of rest) {
+      const { branch } = worktree;
+      if (!(branch && inside(root, worktree.path))) { continue; }
+      const why = await done(main!.path, branch, closed.get(branch));
+      if (why) { lines.push(`${why.label}: ${await remove(main!.path, { ...worktree, branch }, why.merged)}`); }
+    }
+    return lines;
+  });
+
+// Fast-forwards the checkout tf runs from. Returns a line to show, or undefined when main was already current.
+export const pullMain = (cwd: string): Promise<string | undefined> =>
+  serially(async () => {
+    const branch = await git(cwd, "rev-parse", "--abbrev-ref", "HEAD");
+    if (branch !== "main") { return `did not pull main: the checkout is on ${branch}`; }
+    if (await git(cwd, "status", "--porcelain", "--untracked-files=no")) { return "did not pull main: uncommitted changes"; }
+    const before = await git(cwd, "rev-parse", "HEAD");
+    try {
+      await git(cwd, "pull", "--ff-only", "--quiet");
+    } catch (error) {
+      return `did not pull main: ${failure(error)}`;
+    }
+    const after = await git(cwd, "rev-parse", "--short", "HEAD");
+    return (await git(cwd, "rev-parse", "HEAD")) === before ? undefined : `pulled main to ${after}`;
+  });

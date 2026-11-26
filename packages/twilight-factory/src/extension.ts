@@ -9,7 +9,7 @@ import { registerConflictResolver, startConflictResolver } from "./conflict-reso
 import { PANE_KEY, pullRequestPane } from "./pr-pane.js";
 import { registerRedFixer, startRedFixer } from "./red-fixer.js";
 import { appConfigFile, githubToken, NoClientIdError, type Verification } from "./token.js";
-import { removeMergedWorktree } from "./worktrees.js";
+import { type ClosedPullRequest, pullMain, sweepWorktrees } from "./worktrees.js";
 
 const REFRESH_MS = Number(process.env.TF_REFRESH_MS) || 60 * 1000;
 const POLL_MS = Number(process.env.TF_POLL_MS) || 60 * 1000;
@@ -72,6 +72,20 @@ const currentState = async (token: string, repo: string, onRed: (run: FailedRun)
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
+// The newest pull request per branch, from the 100 most recently updated; older ones fall back to git.
+const closedBranches = async (github: ReturnType<typeof gh.client>, repo: string) => {
+  const [owner, name] = repo.split("/") as [string, string];
+  const { data } = await github.rest.pulls.list({ owner, repo: name, state: "all", sort: "updated", direction: "desc", per_page: 100 });
+  const seen = new Set<string>();
+  const closed = new Map<string, ClosedPullRequest>();
+  for (const pr of data) {
+    if (seen.has(pr.head.ref)) { continue; }
+    seen.add(pr.head.ref);
+    if (pr.closed_at !== null) { closed.set(pr.head.ref, { number: pr.number, merged: pr.merged_at !== null }); }
+  }
+  return closed;
+};
+
 // Polls only; webhooks need a registered hook or a smee channel.
 const pullRequestEvents = async (
   cwd: string,
@@ -81,9 +95,20 @@ const pullRequestEvents = async (
   onConflict: (pr: gh.ConflictedPullRequest) => Promise<void>,
 ) => {
   const github = gh.client(await githubToken(onVerification));
+  const repo = await githubRepo(cwd);
+  // A sweep repeats on every merge, so a worktree kept for the same reason is reported once.
+  const shown = new Set<string>();
+  const sweep = async () => {
+    const lines = await sweepWorktrees(cwd, await closedBranches(github, repo));
+    for (const line of lines) {
+      if (!shown.has(line)) { onInfo(`tf: ${line}`); }
+      shown.add(line);
+    }
+  };
+  void sweep().catch(onError);
   const events = gh.eventSource({
     github,
-    repo: await githubRepo(cwd),
+    repo,
     sources: [gh.pullRequestOpened(), gh.pullRequestClosed(), gh.pullRequestConflicted()],
     interval: POLL_MS,
     onError: (error, event) =>
@@ -91,9 +116,11 @@ const pullRequestEvents = async (
   });
   events.on<gh.PullRequest>("pull_request.opened", ({ data }) => gh.enableAutoMerge(github, data));
   events.on<gh.ClosedPullRequest>("pull_request.closed", async ({ data }) => {
-    if (!data.merged) { return; }
-    const result = await removeMergedWorktree(cwd, data.head);
-    if (result) { onInfo(`tf: #${data.number} merged: ${result}`); }
+    if (data.merged) {
+      const pulled = await pullMain(cwd);
+      if (pulled) { onInfo(`tf: ${pulled}`); }
+    }
+    await sweep();
   });
   events.on<gh.ConflictedPullRequest>("pull_request.conflicted", ({ data }) => onConflict(data));
   return events;
