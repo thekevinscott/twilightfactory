@@ -14,7 +14,9 @@ const installedBinary = (): string | undefined => {
   for (const libc of ["", "-musl"]) {
     try {
       return sdk.resolve(`@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}${libc}/claude${suffix}`);
-    } catch {}
+    } catch {
+      // Not installed for this platform; try the next variant.
+    }
   }
   return undefined;
 };
@@ -22,10 +24,10 @@ const installedBinary = (): string | undefined => {
 export const stageClaudeExecutable = (): string | undefined => {
   try {
     const binary = installedBinary();
-    if (!binary) return undefined;
+    if (!binary) { return undefined; }
     const { name, version } = JSON.parse(readFileSync(path.join(path.dirname(binary), "package.json"), "utf8"));
     const staged = path.join(cacheDir, `${name.replace("/", "+")}@${version}`, path.basename(binary));
-    if (existsSync(staged)) return staged;
+    if (existsSync(staged)) { return staged; }
     mkdirSync(path.dirname(staged), { recursive: true });
     const partial = `${staged}.${process.pid}`;
     try {

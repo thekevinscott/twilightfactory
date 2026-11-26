@@ -16,7 +16,7 @@ const rows = (pulls: PullRequestStatus[], theme: Theme): string[] => {
     const draft = pr.draft ? theme.fg("dim", " (draft)") : "";
     return ` ${number}  ${state}  ${pr.title}${draft}`;
   });
-  if (shown.length < pulls.length) lines.push(theme.fg("dim", ` +${pulls.length - shown.length} more`));
+  if (shown.length < pulls.length) { lines.push(theme.fg("dim", ` +${pulls.length - shown.length} more`)); }
   return lines;
 };
 
@@ -41,7 +41,9 @@ export const pullRequestPane = () => {
           tui = ui;
           close = () => done();
           return {
-            invalidate() {},
+            invalidate() {
+              // Rendering reads live state; nothing is cached.
+            },
             render(width: number): string[] {
               const lines = error === undefined ? rows(pulls, theme) : [theme.fg("error", ` pull requests: ${error}`)];
               return [...lines, theme.fg("borderMuted", "─".repeat(width))].map(line => truncateToWidth(line, width));

@@ -48,8 +48,10 @@ const fakeGitHub = () => {
     requests.push(url);
     const page = Number(new URL(url).searchParams.get("page") ?? 1);
     const body = JSON.stringify(page === 1 ? state.pulls : []);
+    // biome-ignore lint/suspicious/noBitwiseOperators: `| 0` keeps the hash a 32-bit int; Math.trunc would not wrap
+    // biome-ignore lint/nursery/useMathTrunc: same line, same reason
     const etag = `"${body.length}-${page}-${[...body].reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) | 0, 0)}"`;
-    if (new Headers(init.headers).get("if-none-match") === etag) return new Response(null, { status: 304, headers: { etag } });
+    if (new Headers(init.headers).get("if-none-match") === etag) { return new Response(null, { status: 304, headers: { etag } }); }
     return new Response(body, { status: 200, headers: { "content-type": "application/json", etag } });
   };
   return { github: gh.client("token", { request: { fetch } }), state, requests };
@@ -71,6 +73,7 @@ const setup = () => {
   // Resolves once every source has polled at least twice more.
   const polls = async () => {
     const before = fake.requests.length;
+    // biome-ignore lint/suspicious/noMisplacedAssertion: a helper that only runs inside tests
     await vi.waitFor(() => expect(fake.requests.length).toBeGreaterThanOrEqual(before + 6));
   };
   return { ...fake, events, seen, polls };
@@ -159,7 +162,7 @@ test("a poll fires pull_request.edited when the title, body or base changes", as
   ];
   await vi.waitFor(() => expect(seen).toHaveLength(3));
   await events.stop();
-  expect(seen.map(({ type, via, data }) => ({ type, via, number: (data as { number: number }).number }))).toEqual([
+  expect(seen.map(({ type, via, data: payload }) => ({ type, via, number: (payload as { number: number }).number }))).toEqual([
     { type: "pull_request.edited", via: "poll", number: 9 },
     { type: "pull_request.edited", via: "poll", number: 10 },
     { type: "pull_request.edited", via: "poll", number: 11 },
@@ -211,7 +214,7 @@ const changes: [string, (pr: Pull) => Pull, (pr: Pull) => Pull][] = [
 test.each(changes)("a %s change seen by webhook and then by poll fires once", async (action, before, after) => {
   const { events, state, seen, polls } = setup();
   const pr = pull(16);
-  if (action !== "opened") state.pulls = [before(pr)];
+  if (action !== "opened") { state.pulls = [before(pr)]; }
   await events.start();
   const changed = after(pr);
   await events.receive(await delivery(action, changed));
@@ -224,7 +227,7 @@ test.each(changes)("a %s change seen by webhook and then by poll fires once", as
 test.each(changes)("a %s change seen by poll and then by webhook fires once", async (action, before, after) => {
   const { events, state, seen } = setup();
   const pr = pull(17);
-  if (action !== "opened") state.pulls = [before(pr)];
+  if (action !== "opened") { state.pulls = [before(pr)]; }
   await events.start();
   const changed = after(pr);
   state.pulls = [changed];

@@ -13,3 +13,5 @@ pnpm-lock.yaml
 .beads/
 tests/docker/recordings/
 .wireit/
+# Written by `pnpm install --allow-build` at the root, which runs with --ignore-workspace.
+/pnpm-workspace.yaml

@@ -8,7 +8,9 @@ install:
     cd packages/state-machine && pnpm install
     cd packages/gh && pnpm install
     cd packages/twilight-factory && pnpm install
-    pnpm install --ignore-workspace
+    # lefthook's postinstall would install the hook itself; the next line does it explicitly.
+    pnpm install --ignore-workspace --allow-build '!lefthook'
+    node_modules/.bin/lefthook install --reset-hooks-path
 
 lint:
     pnpm run lint
