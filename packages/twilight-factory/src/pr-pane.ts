@@ -20,7 +20,8 @@ const rows = (pulls: PullRequestStatus[], theme: Theme): string[] => {
   return lines;
 };
 
-// Open pull requests and the most recently closed, pinned over the top rows of chat.
+// Open pull requests and the most recently closed, pinned to the top of Pi.
+// A blank header of the same height keeps chat, and tf's notices, from starting under it.
 export const pullRequestPane = () => {
   let pulls: PullRequestStatus[] = [];
   let error: string | undefined;
@@ -29,6 +30,10 @@ export const pullRequestPane = () => {
   let close: (() => void) | undefined;
 
   const empty = () => pulls.length === 0 && error === undefined;
+  const render = (width: number, theme: Theme) => {
+    const lines = error === undefined ? rows(pulls, theme) : [theme.fg("error", ` pull requests: ${error}`)];
+    return [...lines, theme.fg("borderMuted", "─".repeat(width))].map(line => truncateToWidth(line, width));
+  };
   const update = () => {
     handle?.setHidden(empty());
     tui?.requestRender();
@@ -36,16 +41,17 @@ export const pullRequestPane = () => {
 
   return {
     attach: (ctx: ExtensionContext) => {
+      ctx.ui.setHeader((_ui, theme) => ({
+        invalidate() {},
+        render: (width: number) => (empty() ? [] : render(width, theme).map(() => "")),
+      }));
       void ctx.ui.custom<void>(
         (ui, theme, _keybindings, done) => {
           tui = ui;
           close = () => done();
           return {
             invalidate() {},
-            render(width: number): string[] {
-              const lines = error === undefined ? rows(pulls, theme) : [theme.fg("error", ` pull requests: ${error}`)];
-              return [...lines, theme.fg("borderMuted", "─".repeat(width))].map(line => truncateToWidth(line, width));
-            },
+            render: (width: number) => render(width, theme),
           };
         },
         {
