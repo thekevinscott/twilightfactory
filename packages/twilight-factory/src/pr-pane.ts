@@ -2,14 +2,20 @@ import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, type OverlayHandle, type TUI } from "@earendil-works/pi-tui";
 import type { PullRequestStatus } from "twilight-gh";
 
-// Rows of pull requests before the rest fold into "+N more"; the rule under them makes one more.
-const MAX_ROWS = 10;
+// Chat keeps this many rows (about three turns); the pane gets what is left above it.
+const CONVERSATION_ROWS = 20;
+// Pi's input box (3) and tf's footer (1).
+const CHROME_ROWS = 4;
+// On a short terminal the pane shrinks to this, rule included, before chat does.
+const MIN_PANE_ROWS = 4;
+
+const paneRows = (terminalRows: number) => Math.max(MIN_PANE_ROWS, terminalRows - CONVERSATION_ROWS - CHROME_ROWS);
 
 const stateColor = { open: "accent", merged: "success", closed: "error" } as const;
 
-const rows = (pulls: PullRequestStatus[], theme: Theme): string[] => {
+const rows = (pulls: PullRequestStatus[], theme: Theme, max: number): string[] => {
   const numberWidth = Math.max(...pulls.map(pr => `#${pr.number}`.length));
-  const shown = pulls.length > MAX_ROWS ? pulls.slice(0, MAX_ROWS - 1) : pulls;
+  const shown = pulls.length > max ? pulls.slice(0, max - 1) : pulls;
   const lines = shown.map(pr => {
     const number = theme.fg("dim", `#${pr.number}`.padEnd(numberWidth));
     const state = theme.fg(stateColor[pr.state], pr.state.padEnd(6));
@@ -30,8 +36,8 @@ export const pullRequestPane = () => {
   let close: (() => void) | undefined;
 
   const empty = () => pulls.length === 0 && error === undefined;
-  const render = (width: number, theme: Theme) => {
-    const lines = error === undefined ? rows(pulls, theme) : [theme.fg("error", ` pull requests: ${error}`)];
+  const render = (width: number, height: number, theme: Theme) => {
+    const lines = error === undefined ? rows(pulls, theme, paneRows(height) - 1) : [theme.fg("error", ` pull requests: ${error}`)];
     return [...lines, theme.fg("borderMuted", "─".repeat(width))].map(line => truncateToWidth(line, width));
   };
   const update = () => {
@@ -41,11 +47,11 @@ export const pullRequestPane = () => {
 
   return {
     attach: (ctx: ExtensionContext) => {
-      ctx.ui.setHeader((_ui, theme) => ({
+      ctx.ui.setHeader((ui, theme) => ({
         invalidate() {
           // Rendering reads live state; nothing is cached.
         },
-        render: (width: number) => (empty() ? [] : render(width, theme).map(() => "")),
+        render: (width: number) => (empty() ? [] : render(width, ui.terminal.rows, theme).map(() => "")),
       }));
       void ctx.ui.custom<void>(
         (ui, theme, _keybindings, done) => {
@@ -55,7 +61,7 @@ export const pullRequestPane = () => {
             invalidate() {
               // Rendering reads live state; nothing is cached.
             },
-            render: (width: number) => render(width, theme),
+            render: (width: number) => render(width, ui.terminal.rows, theme),
           };
         },
         {

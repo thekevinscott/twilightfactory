@@ -7,7 +7,7 @@ import { test } from 'curtaincall/vitest';
 import { expect } from 'vitest';
 
 // The fixture has two open pull requests and seven closed ones, listed in an order unlike their close times.
-const pane = (terminal) => startTf(terminal, { fixture: 'pr-pane/recent', env: { GH_TOKEN: 'gho_pane' }, cols: 120 }).term;
+const pane = (terminal) => startTf(terminal, { fixture: 'pr-pane/recent', env: { GH_TOKEN: 'gho_pane' }, cols: 120, rows: 40 }).term;
 
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', ['-c', 'user.name=tf', '-c', 'user.email=tf@example.com', ...args], { cwd, encoding: 'utf8' }).trim();
