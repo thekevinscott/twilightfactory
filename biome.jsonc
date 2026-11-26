@@ -1,0 +1,143 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    // Fixtures are recorded API responses; lint would rewrite the recordings.
+    "includes": ["**", "!tests/fixtures", "!**/dist", "!.deps"]
+  },
+  // Off until concurrent branches land: reformatting every file would conflict with all of them.
+  "formatter": { "enabled": false },
+  "assist": { "enabled": false },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "all",
+      "nursery": "error",
+      "a11y": "error",
+      "complexity": "error",
+      "correctness": "error",
+      "performance": "error",
+      "security": "error",
+      "style": "error",
+      "suspicious": "error"
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            // Splitting long functions is a refactor, not a lint fix.
+            "noExcessiveLinesPerFunction": "off",
+            // `void promise` marks a deliberately unawaited call.
+            "noVoid": "off",
+            "useMaxParams": "off"
+          },
+          "correctness": {
+            // Node CLI: these rules target browser bundles.
+            "noNodejsModules": "off",
+            "noProcessGlobal": "off",
+            // tsc reports unresolved imports; this one fails until every package is installed.
+            "noUnresolvedImports": "off",
+            // tsc (NodeNext) already requires extensions; this rule misreads `.js`, `.json` and `.mjs` specifiers.
+            "useImportExtensions": "off",
+            // Qwik-only rule; misreads plain closures.
+            "useQwikValidLexicalScope": "off"
+          },
+          "performance": {
+            // Sequential awaits are intentional (API calls in order, polling).
+            "noAwaitInLoops": "off",
+            // Bundle-size rules; nothing here is bundled.
+            "noBarrelFile": "off",
+            "noNamespaceImport": "off",
+            "noReExportAll": "off",
+            // V8 caches regex literals; hoisting moves the pattern away from its use.
+            "useTopLevelRegex": "off"
+          },
+          "style": {
+            // Timeouts, ports and status codes read better inline than as named constants.
+            "noMagicNumbers": "off",
+            // Removing `!` needs a runtime check, which changes behavior.
+            "noNonNullAssertion": "off",
+            // The CLI is configured through env vars by design.
+            "noProcessEnv": "off",
+            "noTernary": "off",
+            // Early `continue` guards read better than nesting the loop body.
+            "noContinue": "off",
+            // Files read top-down from the exported API; reordering is churn.
+            "useExportsLast": "off",
+            // Spec files use `test` throughout; renaming 140 calls is churn across concurrent branches.
+            "useConsistentTestIt": "off",
+            // GitHub API fields are snake_case; we don't own those names.
+            "useNamingConvention": "off",
+            // The `u` flag changes how `.` and classes match astral characters.
+            "useUnicodeRegex": "off"
+          },
+          "suspicious": {
+            // Dropping `async` turns a rejected promise into a sync throw.
+            "useAwait": "off"
+          },
+          "nursery": {
+            "noExcessiveStatementsPerFunction": "off",
+            // Flags state written after an await in tf's refresh loop; reordering it changes behavior.
+            "useAtomicUpdates": "off",
+            // typebox's Type.Object() and similar factories are capitalized by design.
+            "useCapitalizedConstructors": "off",
+            // Renaming exported functions (openRedIssue, ...) ripples across packages.
+            "useConsistentBooleanName": "off",
+            // Spec titles are sentences ("It shows help") and `-t` filters match on them.
+            "useLowercaseTestTitle": "off",
+            // `if (str)` also skips "", unlike `!== undefined`; rewriting changes behavior.
+            "useStrictBooleanExpressions": "off",
+            // null is part of the state machine's input types ("no run yet").
+            "noNull": "off",
+            // Sync fs in the CLI and tests is deliberate; going async changes ordering.
+            "noSyncMethods": "off",
+            // Fixing needs runtime validation of parsed JSON, which changes behavior.
+            "noUnsafeTypeAssertion": "off",
+            // tsc infers these; annotating ~280 sites is churn without a check gained.
+            "useExplicitReturnType": "off",
+            "useExplicitType": "off",
+            // Private packages, never published.
+            "usePackageJsonCpu": "off",
+            "usePackageJsonEngines": "off"
+          }
+        }
+      }
+    },
+    {
+      // Helpers are assigned to globalThis in tests/setup.ts and typed with `declare global`.
+      "includes": ["tests/**"],
+      "javascript": {
+        "globals": ["cli", "proxyEnv", "proxySession", "startTf", "waitForStatus", "requestLog", "proxyRequests"]
+      }
+    },
+    {
+      // Specs assert through curtaincall's expect, imported as expectTerminal, which the rule can't see.
+      "includes": ["tests/specs/**"],
+      "linter": { "rules": { "suspicious": { "useExpect": "off" } } }
+    },
+    {
+      // `declare global` repeats the helper names, which these rules read as redeclarations.
+      "includes": ["tests/setup.ts"],
+      "linter": {
+        "rules": {
+          "correctness": { "noInvalidUseBeforeDeclaration": "off", "noUnusedVariables": "off" },
+          "style": { "useVarsOnTop": "off" },
+          "suspicious": { "noRedeclare": "off" }
+        }
+      }
+    },
+    {
+      // Scripts whose output is the console, and that exit with a code.
+      "includes": [".github/scripts/**", "tests/**/*.mjs"],
+      "linter": { "rules": { "suspicious": { "noConsole": "off" }, "nursery": { "noProcessExit": "off" } } }
+    },
+    {
+      // Pi loads extensions and vitest loads configs through a default export.
+      "includes": ["packages/twilight-factory/src/extension.ts", "**/vitest.config.ts"],
+      "linter": { "rules": { "style": { "noDefaultExport": "off" } } }
+    }
+  ]
+}
