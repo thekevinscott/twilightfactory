@@ -26,9 +26,9 @@ const program = new Command("tf").description(description).version(version);
 
 program.action(async () => {
   const claudeExecutable = stageClaudeExecutable();
-  if (claudeExecutable) process.env.CLAUDE_BRIDGE_CLAUDE_EXECUTABLE ??= claudeExecutable;
-  const cwd = process.cwd();
-  const agentDir = getAgentDir();
+  if (claudeExecutable) { process.env.CLAUDE_BRIDGE_CLAUDE_EXECUTABLE ??= claudeExecutable; }
+  const startCwd = process.cwd();
+  const startAgentDir = getAgentDir();
 
   const createRuntime: CreateAgentSessionRuntimeFactory = async ({ cwd, agentDir, sessionManager, sessionStartEvent }) => {
     const settingsManager = SettingsManager.create(cwd, agentDir);
@@ -56,7 +56,11 @@ program.action(async () => {
     };
   };
 
-  const runtime = await createAgentSessionRuntime(createRuntime, { cwd, agentDir, sessionManager: SessionManager.create(cwd) });
+  const runtime = await createAgentSessionRuntime(createRuntime, {
+    cwd: startCwd,
+    agentDir: startAgentDir,
+    sessionManager: SessionManager.create(startCwd),
+  });
   await new InteractiveMode(runtime).run();
 });
 

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Octokit } from "@octokit/rest";
-import { defineSource, type PollContext } from "./events.js";
+import { type Change, defineSource, type PollContext } from "./events.js";
 
 export interface PullRequest {
   number: number;
@@ -62,7 +62,7 @@ const after = (time: string | null, since: Date) => time !== null && Date.parse(
 // Newest-updated first; stops at the first page that reaches back past `since`, or after one page with no `since`.
 const recent = async ({ get }: PollContext, since: Date | null): Promise<Item[]> => {
   const items: Item[] = [];
-  for (let page = 1; ; page++) {
+  for (let page = 1; ; page += 1) {
     const batch = await get<Item[]>("GET /repos/{owner}/{repo}/pulls", {
       state: "all",
       sort: "updated",
@@ -71,7 +71,7 @@ const recent = async ({ get }: PollContext, since: Date | null): Promise<Item[]>
       page,
     });
     items.push(...batch);
-    if (since === null || batch.length < PER_PAGE || !after(batch.at(-1)!.updated_at, since)) return items;
+    if (since === null || batch.length < PER_PAGE || !after(batch.at(-1)!.updated_at, since)) { return items; }
   }
 };
 
@@ -87,7 +87,7 @@ export const pullRequestOpened = () =>
     },
     poll: async context => {
       const { since } = context;
-      if (since === null) return [];
+      if (since === null) { return []; }
       return (await recent(context, since))
         .filter(item => after(item.created_at, since))
         .map(item => ({ key: openedKey(item), data: pullRequest(item) }));
@@ -103,7 +103,7 @@ export const pullRequestClosed = () =>
     },
     poll: async context => {
       const { since } = context;
-      if (since === null) return [];
+      if (since === null) { return []; }
       return (await recent(context, since))
         .filter(item => after(item.closed_at, since))
         .map(item => ({ key: closedKey(item), data: closed(item) }));
@@ -120,12 +120,13 @@ export const pullRequestEdited = () => {
       changes: ({ payload }) => [{ key: editedKey(payload.pull_request), data: pullRequest(payload.pull_request) }],
     },
     poll: async context => {
-      const changes = [];
-      for (const item of await recent(context, context.since)) {
+      const changes: Change<PullRequest>[] = [];
+      const items = await recent(context, context.since);
+      for (const item of items) {
         const key = editedKey(item);
         const previous = last.get(item.number);
         last.set(item.number, key);
-        if (previous !== undefined && previous !== key) changes.push({ key, data: pullRequest(item) });
+        if (previous !== undefined && previous !== key) { changes.push({ key, data: pullRequest(item) }); }
       }
       return changes;
     },
@@ -146,12 +147,12 @@ export const enableAutoMerge = async (
   github: Octokit,
   { nodeId, draft }: Pick<PullRequest, "nodeId" | "draft">,
 ): Promise<AutoMerge> => {
-  if (draft) return "draft";
+  if (draft) { return "draft"; }
   try {
     await github.graphql(enableAutoMergeMutation, { pullRequestId: nodeId, mergeMethod: "MERGE" });
     return "enabled";
   } catch (error) {
-    if (/already/i.test((error as Error).message)) return "already-enabled";
+    if (/already/i.test((error as Error).message)) { return "already-enabled"; }
     throw error;
   }
 };
@@ -173,11 +174,11 @@ export const pullRequestConflicted = () =>
     type: "pull_request.conflicted",
     poll: async ({ get }) => {
       const open = await get<Item[]>("GET /repos/{owner}/{repo}/pulls", { state: "open", per_page: PER_PAGE });
-      const changes = [];
+      const changes: Change<ConflictedPullRequest>[] = [];
       for (const { number, draft } of open) {
-        if (draft) continue;
+        if (draft) { continue; }
         const item = await get<Detail>("GET /repos/{owner}/{repo}/pulls/{pull_number}", { pull_number: number });
-        if (item.mergeable_state !== "dirty") continue;
+        if (item.mergeable_state !== "dirty") { continue; }
         changes.push({ key: `${number}:${item.head.sha}`, data: { ...pullRequest(item), headSha: item.head.sha } });
       }
       return changes;

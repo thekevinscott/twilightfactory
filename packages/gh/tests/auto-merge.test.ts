@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import * as gh from "../src/index.js";
 
-type Request = { url: string; body: { query: string; variables: unknown } };
+interface Request { url: string; body: { query: string; variables: unknown } }
 
 const fake = (response: unknown) => {
   const requests: Request[] = [];

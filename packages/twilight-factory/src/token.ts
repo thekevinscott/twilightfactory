@@ -5,7 +5,10 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { createOAuthDeviceAuth } from "@octokit/auth-oauth-device";
 
-export type Verification = { userCode: string; verificationUri: string };
+export interface Verification {
+  userCode: string;
+  verificationUri: string;
+}
 
 const configDir = () => path.join(process.env.XDG_CONFIG_HOME || path.join(homedir(), ".config"), "twilightfactory");
 
