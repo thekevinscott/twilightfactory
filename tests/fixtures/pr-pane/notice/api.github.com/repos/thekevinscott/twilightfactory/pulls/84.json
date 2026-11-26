@@ -1,0 +1,23 @@
+{
+    "number": 84,
+    "node_id": "PR_node84",
+    "title": "Closed on the 4th",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/84",
+    "draft": false,
+    "user": {
+        "login": "thekevinbot"
+    },
+    "head": {
+        "ref": "branch-84",
+        "sha": "sha84"
+    },
+    "base": {
+        "ref": "main"
+    },
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T18:00:00Z",
+    "closed_at": "2026-11-04T00:00:00Z",
+    "merged_at": null,
+    "mergeable_state": "clean"
+}

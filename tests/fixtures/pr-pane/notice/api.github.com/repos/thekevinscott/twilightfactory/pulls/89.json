@@ -1,0 +1,23 @@
+{
+    "number": 89,
+    "node_id": "PR_node89",
+    "title": "Merged on the 20th",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/89",
+    "draft": false,
+    "user": {
+        "login": "thekevinbot"
+    },
+    "head": {
+        "ref": "branch-89",
+        "sha": "sha89"
+    },
+    "base": {
+        "ref": "main"
+    },
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T23:00:00Z",
+    "closed_at": "2026-11-20T00:00:00Z",
+    "merged_at": "2026-11-20T00:00:00Z",
+    "mergeable_state": "clean"
+}
