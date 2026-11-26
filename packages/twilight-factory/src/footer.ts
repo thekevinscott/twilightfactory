@@ -6,7 +6,6 @@ const labels: Record<string, [dot: string, text: string]> = {
   STOP: ["⚪", "waiting"],
   GO_PLAIN: ["🔵", "tests due"],
   GO_MEASURED: ["🔵", "tests due"],
-  RECHECK_PRS: ["🟡", "PRs blocked"],
   FILE_ISSUE: ["🔴", "red"],
   SIGN_IN: ["🟡", "sign in to GitHub"],
 };
