@@ -2,8 +2,8 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    // Fixtures are recorded API responses; lint would rewrite the recordings.
-    "includes": ["**", "!tests/fixtures", "!**/dist", "!.deps"]
+    // Fixtures are recorded API responses; lint would rewrite the recordings. CI installs into .pnpm-store in the checkout.
+    "includes": ["**", "!tests/fixtures", "!**/dist", "!.deps", "!.pnpm-store"]
   },
   // Off until concurrent branches land: reformatting every file would conflict with all of them.
   "formatter": { "enabled": false },
