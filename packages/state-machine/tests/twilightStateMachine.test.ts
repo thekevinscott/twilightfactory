@@ -49,22 +49,22 @@ const cases: Case[] = [
   {
     name: "a run is queued",
     inputs: { lastRun: run("queued", "", 1, "aaa"), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "QUIET", fetched: ["lastRun"] },
+    outputs: { state: "STOP", fetched: ["lastRun"] },
   },
   {
     name: "a run is in progress",
     inputs: { lastRun: run("in_progress", "", 30, "aaa"), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "QUIET", fetched: ["lastRun"] },
+    outputs: { state: "STOP", fetched: ["lastRun"] },
   },
   {
     name: "a run has been in progress for two hours",
     inputs: { lastRun: run("in_progress", "", 2 * HOURS, "aaa"), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "QUIET", fetched: ["lastRun"] },
+    outputs: { state: "STOP", fetched: ["lastRun"] },
   },
   {
     name: "a run is in progress, a pull request is blocked",
     inputs: { lastRun: run("in_progress", "", 30, "aaa"), lastMeasuredRun: measured25h, head: "bbb", blockedPullRequests: 2 },
-    outputs: { state: "QUIET", fetched: ["lastRun"] },
+    outputs: { state: "STOP", fetched: ["lastRun"] },
   },
 
   // Red
@@ -81,12 +81,12 @@ const cases: Case[] = [
   {
     name: "failed 30 minutes ago, red issue open",
     inputs: { lastRun: failed(30), lastMeasuredRun: measured25h, head: "bbb", openRedIssue: true },
-    outputs: { state: "FIXING", fetched: ["lastRun", "openRedIssue"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
   },
   {
     name: "failed two days ago, red issue open",
     inputs: { lastRun: failed(48 * HOURS), lastMeasuredRun: measured25h, head: "bbb", openRedIssue: true },
-    outputs: { state: "FIXING", fetched: ["lastRun", "openRedIssue"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
   },
   {
     name: "failed measured run, no red issue",
@@ -96,7 +96,7 @@ const cases: Case[] = [
   {
     name: "failed, red issue open, a pull request is blocked",
     inputs: { lastRun: failed(2 * HOURS), lastMeasuredRun: measured25h, head: "bbb", openRedIssue: true, blockedPullRequests: 2 },
-    outputs: { state: "FIXING", fetched: ["lastRun", "openRedIssue"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
   },
 
   {
@@ -107,7 +107,7 @@ const cases: Case[] = [
   {
     name: "timed out, red issue open",
     inputs: { lastRun: run("completed", "timed_out", 2 * HOURS, "aaa"), lastMeasuredRun: measured25h, head: "bbb", openRedIssue: true },
-    outputs: { state: "FIXING", fetched: ["lastRun", "openRedIssue"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
   },
 
   // Green again, pull requests still blocked
@@ -124,29 +124,29 @@ const cases: Case[] = [
   {
     name: "passed, red issue still open, nothing blocked",
     inputs: { lastRun: passed(30), lastMeasuredRun: measured25h, head: "bbb", openRedIssue: true },
-    outputs: { state: "QUIET", fetched: ["lastRun", "blockedPullRequests"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests"] },
   },
 
   // Green, waiting
   {
     name: "passed 30 minutes ago, new commits",
     inputs: { lastRun: passed(30), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "QUIET", fetched: ["lastRun", "blockedPullRequests"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests"] },
   },
   {
     name: "passed 59 minutes ago, new commits",
     inputs: { lastRun: passed(59), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "QUIET", fetched: ["lastRun", "blockedPullRequests"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests"] },
   },
   {
     name: "passed two hours ago, no new commits, measured run overdue",
     inputs: { lastRun: passed2h, lastMeasuredRun: measured25h, head: "aaa" },
-    outputs: { state: "QUIET", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
   },
   {
     name: "passed two days ago, no new commits",
     inputs: { lastRun: passed(48 * HOURS), lastMeasuredRun: passed(48 * HOURS), head: "aaa" },
-    outputs: { state: "QUIET", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
   },
 
   // Green, go
@@ -180,7 +180,7 @@ const cases: Case[] = [
   {
     name: "fixed 30 minutes ago by a plain run, measured run failed",
     inputs: { lastRun: passed(30), lastMeasuredRun: failed(3 * HOURS), head: "aaa" },
-    outputs: { state: "QUIET", fetched: ["lastRun", "blockedPullRequests"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests"] },
   },
   {
     name: "fixed two hours ago by a plain run, measured run failed, no new commits",
@@ -213,7 +213,7 @@ const cases: Case[] = [
     {
       name: `${conclusion} 30 minutes ago, red issue open`,
       inputs: { lastRun: run("completed", conclusion, 30, "aaa"), lastMeasuredRun: measured2h, head: "bbb", openRedIssue: true },
-      outputs: { state: "FIXING", fetched: ["lastRun", "openRedIssue"] },
+      outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
     },
   ]),
 ];
