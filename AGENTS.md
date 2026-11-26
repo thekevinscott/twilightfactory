@@ -33,17 +33,13 @@ Spec files are named `<name>.test.ts`, with no numeric prefix.
 
 The repo has no required checks, on purpose. Main is guarded by tf's state machine, not by branch protection. Don't add required checks or propose them.
 
-So auto-merge does not wait for tests. Agents merge their own PRs only after a green branch run:
+Agents merge their own PRs.
 
-1. Open every PR as a draft: `gh pr create --draft`.
-2. Dispatch `tests.yml` on your branch: `gh workflow run tests.yml --ref <branch>`.
-3. Wait for that run to go green.
-4. Mark the PR ready, then turn on auto-merge: `gh pr ready <number>`, then `gh pr merge <number> --auto --merge`.
-
-- If you merge origin/main into your branch, rerun the branch tests and wait for green before marking ready.
-- While `tf` runs, it turns on auto-merge (merge commit) for every pull request opened in the repo. It polls about once a minute, skips drafts, and misses pull requests opened while it was not running. This is why PRs start as drafts.
+- Open a finished PR ready, with auto-merge on: `gh pr merge <number> --auto --merge`. It merges right away.
+- While `tf` runs, it turns on auto-merge (merge commit) for every pull request opened in the repo, so this usually happens without you. It polls about once a minute, skips drafts, and misses pull requests opened while it was not running.
 - Avoid turning auto-merge off (`gh pr merge --disable-auto`).
-- Never use `--ref main`: only `tf` dispatches runs on main, because those runs belong to its state machine.
+- Don't push work that isn't ready. If you have to push it early, open the PR as a draft (`gh pr create --draft`) and turn on auto-merge only after `gh pr ready`.
+- To check a PR, you may dispatch `tests.yml` on your branch: `gh workflow run tests.yml --ref <branch>`. Never use `--ref main`: only `tf` dispatches runs on main, because those runs belong to its state machine.
 
 ## State machine
 
