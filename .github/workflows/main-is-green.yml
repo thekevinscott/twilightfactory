@@ -1,6 +1,6 @@
 name: Main is green
 
-# Blocks pull requests while main is red. tf re-runs failed checks once main passes.
+# Blocks pull requests while main is red. Recheck blocked pull requests re-runs failed checks once main passes.
 # A pull request labeled run-ci is judged by its own tests.yml run instead; Recheck run-ci
 # pull requests re-runs this check when that run finishes.
 on:
