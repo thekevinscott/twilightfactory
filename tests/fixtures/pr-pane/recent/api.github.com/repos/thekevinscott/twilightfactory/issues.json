@@ -1,0 +1,158 @@
+[
+  {
+    "number": 91,
+    "node_id": "I_node91",
+    "title": "Open and in review",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/issues/91",
+    "state": "open",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T23:00:00Z",
+    "closed_at": null
+  },
+  {
+    "number": 92,
+    "node_id": "I_node92",
+    "title": "Open pull request",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/92",
+    "state": "open",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T23:00:00Z",
+    "closed_at": null,
+    "pull_request": {
+      "url": "https://api.github.com/repos/thekevinscott/twilightfactory/pulls/92"
+    }
+  },
+  {
+    "number": 90,
+    "node_id": "I_node90",
+    "title": "Open since last week",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/issues/90",
+    "state": "open",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T22:00:00Z",
+    "closed_at": null
+  },
+  {
+    "number": 89,
+    "node_id": "I_node89",
+    "title": "Closed on the 20th",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/issues/89",
+    "state": "closed",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T21:00:00Z",
+    "closed_at": "2026-11-20T00:00:00Z"
+  },
+  {
+    "number": 88,
+    "node_id": "I_node88",
+    "title": "Pull request closed on the 23rd",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/88",
+    "state": "closed",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T20:00:00Z",
+    "closed_at": "2026-11-23T00:00:00Z",
+    "pull_request": {
+      "url": "https://api.github.com/repos/thekevinscott/twilightfactory/pulls/88"
+    }
+  },
+  {
+    "number": 87,
+    "node_id": "I_node87",
+    "title": "Closed on the 21st",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/issues/87",
+    "state": "closed",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T19:00:00Z",
+    "closed_at": "2026-11-21T00:00:00Z"
+  },
+  {
+    "number": 86,
+    "node_id": "I_node86",
+    "title": "Closed on the 3rd",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/issues/86",
+    "state": "closed",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T18:00:00Z",
+    "closed_at": "2026-11-03T00:00:00Z"
+  },
+  {
+    "number": 85,
+    "node_id": "I_node85",
+    "title": "Closed on the 22nd",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/issues/85",
+    "state": "closed",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T17:00:00Z",
+    "closed_at": "2026-11-22T00:00:00Z"
+  },
+  {
+    "number": 83,
+    "node_id": "I_node83",
+    "title": "Closed on the 19th",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/issues/83",
+    "state": "closed",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T16:00:00Z",
+    "closed_at": "2026-11-19T00:00:00Z"
+  },
+  {
+    "number": 82,
+    "node_id": "I_node82",
+    "title": "Closed on the 18th",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/issues/82",
+    "state": "closed",
+    "user": {
+      "login": "thekevinbot"
+    },
+    "labels": [],
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T15:00:00Z",
+    "closed_at": "2026-11-18T00:00:00Z"
+  }
+]

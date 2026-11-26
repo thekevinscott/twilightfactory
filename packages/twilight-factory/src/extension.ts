@@ -133,7 +133,7 @@ export default function tfExtension(pi: ExtensionAPI) {
       currentState(token, repo, run => startRedFixer(pi, ctx.cwd, run)).then(showState, (error: unknown) =>
         showState(`error: ${message(error)}`),
       ),
-      gh.recentPullRequests(gh.client(token), repo).then(pane.show, (error: unknown) => pane.fail(message(error))),
+      gh.recentIssues(gh.client(token), repo).then(pane.show, (error: unknown) => pane.fail(message(error))),
     ]);
   };
 

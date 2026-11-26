@@ -70,40 +70,33 @@ export const fileIssue = async (github: Octokit, repo: string, run: Run): Promis
   });
 };
 
-export interface PullRequestStatus {
+export interface IssueStatus {
   number: number;
   title: string;
   url: string;
-  draft: boolean;
-  state: "open" | "merged" | "closed";
+  state: "open" | "closed";
 }
 
 const CLOSED_SHOWN = 5;
-// GitHub can't sort by close time, so read a margin of recently updated ones and sort those.
-const CLOSED_SCANNED = 30;
+// GitHub can't sort by close time, and the issues endpoint returns pull requests too, so read a wide margin and sort those.
+const CLOSED_SCANNED = 100;
 
-const statusState = (pr: { closed_at: string | null; merged_at: string | null }): PullRequestStatus["state"] => {
-  if (pr.closed_at === null) { return "open"; }
-  return pr.merged_at === null ? "closed" : "merged";
-};
-
-export const recentPullRequests = async (github: Octokit, repo: string): Promise<PullRequestStatus[]> => {
+export const recentIssues = async (github: Octokit, repo: string): Promise<IssueStatus[]> => {
   const [open, closed] = await Promise.all([
-    github.rest.pulls.list({ ...split(repo), state: "open", per_page: 100 }),
-    github.rest.pulls.list({ ...split(repo), state: "closed", sort: "updated", direction: "desc", per_page: CLOSED_SCANNED }),
+    github.rest.issues.listForRepo({ ...split(repo), state: "open", per_page: 100 }),
+    github.rest.issues.listForRepo({ ...split(repo), state: "closed", sort: "updated", direction: "desc", per_page: CLOSED_SCANNED }),
   ]);
-  const status = (pr: (typeof open.data)[number]): PullRequestStatus => ({
-    number: pr.number,
-    title: pr.title,
-    url: pr.html_url,
-    draft: pr.draft ?? false,
-    state: statusState(pr),
+  const status = (issue: (typeof open.data)[number]): IssueStatus => ({
+    number: issue.number,
+    title: issue.title,
+    url: issue.html_url,
+    state: issue.closed_at === null ? "open" : "closed",
   });
   const recentlyClosed = closed.data
-    .filter(pr => pr.closed_at !== null)
+    .filter(issue => !issue.pull_request && issue.closed_at !== null)
     .sort((a, b) => Date.parse(b.closed_at!) - Date.parse(a.closed_at!))
     .slice(0, CLOSED_SHOWN);
-  return [...open.data.filter(pr => pr.closed_at === null), ...recentlyClosed].map(status);
+  return [...open.data.filter(issue => !issue.pull_request && issue.closed_at === null), ...recentlyClosed].map(status);
 };
 
 const isRed = (run: Run) => run.status === "completed" && run.conclusion !== "success";

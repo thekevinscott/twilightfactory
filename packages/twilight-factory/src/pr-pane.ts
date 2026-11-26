@@ -1,29 +1,28 @@
 import type { ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, type OverlayHandle, type TUI } from "@earendil-works/pi-tui";
-import type { PullRequestStatus } from "twilight-gh";
+import type { IssueStatus } from "twilight-gh";
 
-// Rows of pull requests before the rest fold into "+N more"; the rule under them makes one more.
+// Rows of issues before the rest fold into "+N more"; the rule under them makes one more.
 const MAX_ROWS = 10;
 
-const stateColor = { open: "accent", merged: "success", closed: "error" } as const;
+const stateColor = { open: "accent", closed: "success" } as const;
 
-const rows = (pulls: PullRequestStatus[], theme: Theme): string[] => {
+const rows = (pulls: IssueStatus[], theme: Theme): string[] => {
   const numberWidth = Math.max(...pulls.map(pr => `#${pr.number}`.length));
   const shown = pulls.length > MAX_ROWS ? pulls.slice(0, MAX_ROWS - 1) : pulls;
   const lines = shown.map(pr => {
     const number = theme.fg("dim", `#${pr.number}`.padEnd(numberWidth));
     const state = theme.fg(stateColor[pr.state], pr.state.padEnd(6));
-    const draft = pr.draft ? theme.fg("dim", " (draft)") : "";
-    return ` ${number}  ${state}  ${pr.title}${draft}`;
+    return ` ${number}  ${state}  ${pr.title}`;
   });
   if (shown.length < pulls.length) { lines.push(theme.fg("dim", ` +${pulls.length - shown.length} more`)); }
   return lines;
 };
 
-// Open pull requests and the most recently closed, pinned to the top of Pi.
+// Open issues and the most recently closed, pinned to the top of Pi.
 // A blank header of the same height keeps chat, and tf's notices, from starting under it.
 export const pullRequestPane = () => {
-  let pulls: PullRequestStatus[] = [];
+  let pulls: IssueStatus[] = [];
   let error: string | undefined;
   let tui: TUI | undefined;
   let handle: OverlayHandle | undefined;
@@ -31,7 +30,7 @@ export const pullRequestPane = () => {
 
   const empty = () => pulls.length === 0 && error === undefined;
   const render = (width: number, theme: Theme) => {
-    const lines = error === undefined ? rows(pulls, theme) : [theme.fg("error", ` pull requests: ${error}`)];
+    const lines = error === undefined ? rows(pulls, theme) : [theme.fg("error", ` issues: ${error}`)];
     return [...lines, theme.fg("borderMuted", "─".repeat(width))].map(line => truncateToWidth(line, width));
   };
   const update = () => {
@@ -68,7 +67,7 @@ export const pullRequestPane = () => {
         },
       );
     },
-    show: (next: PullRequestStatus[]) => {
+    show: (next: IssueStatus[]) => {
       pulls = next;
       error = undefined;
       update();
