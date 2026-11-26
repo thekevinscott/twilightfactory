@@ -1,0 +1,23 @@
+{
+    "number": 88,
+    "node_id": "PR_node88",
+    "title": "Closed on the 23rd",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/88",
+    "draft": false,
+    "user": {
+        "login": "thekevinbot"
+    },
+    "head": {
+        "ref": "branch-88",
+        "sha": "sha88"
+    },
+    "base": {
+        "ref": "main"
+    },
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T22:00:00Z",
+    "closed_at": "2026-11-23T00:00:00Z",
+    "merged_at": null,
+    "mergeable_state": "clean"
+}
