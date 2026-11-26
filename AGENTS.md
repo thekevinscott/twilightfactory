@@ -20,6 +20,8 @@ just test tests/specs/twilight-factory/basic.test.ts
 
 Lint and typecheck locally are fine.
 
+Spec files are named `<name>.test.ts`, with no numeric prefix.
+
 ## Lint
 
 `just install` sets up a pre-commit hook (lefthook) that runs Biome with every rule on over the staged files. CI runs the same lint on the whole repo.

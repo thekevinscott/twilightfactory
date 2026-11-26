@@ -1,0 +1,10 @@
+{
+  "providers": {
+    "fake": {
+      "baseUrl": "https://llm.fixture/v1",
+      "api": "openai-completions",
+      "apiKey": "fake",
+      "models": [{ "id": "fake" }]
+    }
+  }
+}

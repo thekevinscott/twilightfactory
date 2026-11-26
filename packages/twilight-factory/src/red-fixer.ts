@@ -1,8 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { createRequire } from "node:module";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-const require = createRequire(import.meta.url);
+import { registerAgent, startAgent } from "./subagents.js";
 
 export const RED_FIXER = "red-fixer";
 
@@ -22,41 +19,8 @@ You get three attempts. An attempt ends when the GitHub run on your branch finis
 const task = (run: { id: number; url: string; headSha: string }) =>
   `Main is red. Failed tests.yml run ${run.id} at ${run.headSha}: ${run.url}`;
 
-export const registerRedFixer = (pi: ExtensionAPI): { dispose: () => void } => {
-  const request: {
-    version: 1;
-    name: string;
-    definition: { description: string; systemPrompt: string; extensions: string[] };
-    result?: { ok: true; registration: { dispose: () => void } } | { ok: false; error: Error };
-  } = {
-    version: 1,
-    name: RED_FIXER,
-    definition: {
-      description: "Files a red issue for a failed run on main and pushes a fix.",
-      systemPrompt,
-      // Background children load only these extensions; the parent's claude-bridge model resolves through it.
-      extensions: [require.resolve("pi-claude-bridge/src/index.ts")],
-    },
-  };
-  pi.events.emit("pi-subagents:runtime-agent-register:v1", request);
-  if (!request.result) { throw new Error("pi-subagents did not register the red-fixer agent"); }
-  if (!request.result.ok) { throw request.result.error; }
-  return request.result.registration;
-};
+export const registerRedFixer = (pi: ExtensionAPI): { dispose: () => void } =>
+  registerAgent(pi, RED_FIXER, { description: "Files a red issue for a failed run on main and pushes a fix.", systemPrompt });
 
 export const startRedFixer = (pi: ExtensionAPI, cwd: string, run: { id: number; url: string; headSha: string }): Promise<void> =>
-  new Promise((resolve, reject) => {
-    const requestId = randomUUID();
-    const off = pi.events.on(`subagents:rpc:v1:reply:${requestId}`, (reply) => {
-      off();
-      const { success, error } = reply as { success: boolean; error?: { message: string } };
-      if (success) { resolve(); } else { reject(new Error(`red-fixer: ${error?.message ?? "spawn failed"}`)); }
-    });
-    pi.events.emit("subagents:rpc:v1:request", {
-      version: 1,
-      requestId,
-      method: "spawn",
-      params: { agent: RED_FIXER, task: task(run), cwd },
-      source: { extension: "twilightfactory" },
-    });
-  });
+  startAgent(pi, RED_FIXER, cwd, task(run));

@@ -5,6 +5,8 @@ import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { chatContext } from "./chat-context.js";
 import { stateDisplay } from "./footer.js";
+import { registerConflictResolver, startConflictResolver } from "./conflict-resolver.js";
+import { pullRequestPane } from "./pr-pane.js";
 import { registerRedFixer, startRedFixer } from "./red-fixer.js";
 import { appConfigFile, githubToken, NoClientIdError, type Verification } from "./token.js";
 import { removeMergedWorktree } from "./worktrees.js";
@@ -27,22 +29,10 @@ let fixingFor: number | undefined;
 
 type FailedRun = Pick<gh.Run, "id" | "url" | "headSha">;
 
-const currentState = async (
-  cwd: string,
-  onVerification: (verification: Verification) => void,
-  onRed: (run: FailedRun) => Promise<void>,
-): Promise<string> => {
-  let token: string;
-  try {
-    token = await githubToken(onVerification);
-  } catch (error) {
-    if (error instanceof NoClientIdError) { return error.message; }
-    throw error;
-  }
+const currentState = async (token: string, repo: string, onRed: (run: FailedRun) => Promise<void>): Promise<string> => {
   const github = gh.client(token);
   // Read on every refresh so a broken app config shows in the footer rather than falling back to the user.
   const app = await gh.readAppConfig(appConfigFile());
-  const repo = await githubRepo(cwd);
   let headSha: string | undefined;
   const seen: { lastRun?: gh.Run | null } = {};
   const inputs: Inputs = {
@@ -88,12 +78,13 @@ const pullRequestEvents = async (
   onVerification: (verification: Verification) => void,
   onError: (error: unknown) => void,
   onInfo: (text: string) => void,
+  onConflict: (pr: gh.ConflictedPullRequest) => Promise<void>,
 ) => {
   const github = gh.client(await githubToken(onVerification));
   const events = gh.eventSource({
     github,
     repo: await githubRepo(cwd),
-    sources: [gh.pullRequestOpened(), gh.pullRequestClosed()],
+    sources: [gh.pullRequestOpened(), gh.pullRequestClosed(), gh.pullRequestConflicted()],
     interval: POLL_MS,
     onError: (error, event) =>
       onError(event ? new Error(`${event.type} #${(event.data as gh.PullRequest).number}: ${message(error)}`) : error),
@@ -104,14 +95,16 @@ const pullRequestEvents = async (
     const result = await removeMergedWorktree(cwd, data.head);
     if (result) { onInfo(`tf: #${data.number} merged: ${result}`); }
   });
+  events.on<gh.ConflictedPullRequest>("pull_request.conflicted", ({ data }) => onConflict(data));
   return events;
 };
 
 export default function tfExtension(pi: ExtensionAPI) {
   let timer: NodeJS.Timeout | undefined;
   let events: gh.EventSource | undefined;
-  let redFixer: { dispose: () => void } | undefined;
+  let agents: { dispose: () => void }[] = [];
   const display = stateDisplay(pi);
+  const pane = pullRequestPane();
   let state: string | undefined;
   chatContext(pi, { repo: githubRepo, github: async () => gh.client(await githubToken(() => undefined)), state: () => state });
 
@@ -121,15 +114,27 @@ export default function tfExtension(pi: ExtensionAPI) {
   };
 
   const show = async (ctx: ExtensionContext) => {
-    let text: string;
+    const showState = (text: string) => {
+      state = text;
+      display.show(text);
+    };
+    let token: string;
+    let repo: string;
     try {
-      text = await currentState(ctx.cwd, signIn(ctx), run => startRedFixer(pi, ctx.cwd, run));
+      token = await githubToken(signIn(ctx));
+      repo = await githubRepo(ctx.cwd);
     } catch (error) {
-      text = `error: ${message(error)}`;
+      ctx.ui.setWidget("tf-sign-in", undefined);
+      showState(error instanceof NoClientIdError ? error.message : `error: ${message(error)}`);
+      return;
     }
     ctx.ui.setWidget("tf-sign-in", undefined);
-    state = text;
-    display.show(text);
+    await Promise.all([
+      currentState(token, repo, run => startRedFixer(pi, ctx.cwd, run)).then(showState, (error: unknown) =>
+        showState(`error: ${message(error)}`),
+      ),
+      gh.recentPullRequests(gh.client(token), repo).then(pane.show, (error: unknown) => pane.fail(message(error))),
+    ]);
   };
 
   pi.on("session_start", async (_event, ctx) => {
@@ -137,11 +142,17 @@ export default function tfExtension(pi: ExtensionAPI) {
       return;
     }
     display.attach(ctx);
-    redFixer = registerRedFixer(pi);
+    pane.attach(ctx);
+    agents = [registerRedFixer(pi), registerConflictResolver(pi)];
     void show(ctx);
     timer = setInterval(() => void show(ctx), REFRESH_MS);
     const onError = (error: unknown) => ctx.ui.notify(`tf: ${message(error)}`, "warning");
-    pullRequestEvents(ctx.cwd, signIn(ctx), onError, text => ctx.ui.notify(text, "info"))
+    const onInfo = (text: string) => ctx.ui.notify(text, "info");
+    const onConflict = async (pr: gh.ConflictedPullRequest) => {
+      await startConflictResolver(pi, ctx.cwd, pr);
+      onInfo(`tf: #${pr.number} has conflicts: started the conflict resolver`);
+    };
+    pullRequestEvents(ctx.cwd, signIn(ctx), onError, onInfo, onConflict)
       .then(source => {
         if (timer === undefined) { return; }
         events = source;
@@ -156,9 +167,10 @@ export default function tfExtension(pi: ExtensionAPI) {
   pi.on("session_shutdown", async () => {
     clearInterval(timer);
     timer = undefined;
-    redFixer?.dispose();
-    redFixer = undefined;
+    for (const agent of agents) { agent.dispose(); }
+    agents = [];
     await events?.stop();
     events = undefined;
+    pane.dispose();
   });
 }

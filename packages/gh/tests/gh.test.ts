@@ -167,3 +167,64 @@ test("confirmFix with no red run starts nothing", async () => {
   await expect(gh.confirmFix(github, repo)).rejects.toThrow("no red run");
   expect(requests).toHaveLength(1);
 });
+
+const apiPull = (number: number, closed_at: string | null = null, merged = false) => ({
+  number,
+  title: `title ${number}`,
+  html_url: `https://github.com/${repo}/pull/${number}`,
+  draft: number === 2,
+  closed_at,
+  merged_at: merged ? closed_at : null,
+});
+const statusOf = (number: number, state: gh.PullRequestStatus["state"]): gh.PullRequestStatus => ({
+  number,
+  title: `title ${number}`,
+  url: `https://github.com/${repo}/pull/${number}`,
+  draft: number === 2,
+  state,
+});
+
+// Answers by the `state` query parameter, so the order the two requests go out in doesn't matter.
+const fakePulls = (open: unknown[], closed: unknown[]) => {
+  const requests: string[] = [];
+  const fetch = async (url: string) => {
+    requests.push(url);
+    const body = new URL(url).searchParams.get("state") === "open" ? open : closed;
+    return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  return { github: gh.client("token", { request: { fetch } }), requests };
+};
+
+test("recentPullRequests lists every open pull request, then the 5 most recently closed", async () => {
+  const day = (n: number) => `2026-11-${String(n).padStart(2, "0")}T00:00:00Z`;
+  // Sorted by last update, which is not the order they closed in.
+  const closed = [
+    apiPull(10, day(10), true),
+    apiPull(11, day(20)),
+    apiPull(12, day(12), true),
+    apiPull(13, day(13), true),
+    apiPull(14, day(1)),
+    apiPull(15, day(15), true),
+    apiPull(16, day(16)),
+  ];
+  const { github, requests } = fakePulls([apiPull(1), apiPull(2), apiPull(3)], closed);
+  expect(await gh.recentPullRequests(github, repo)).toEqual([
+    statusOf(1, "open"),
+    statusOf(2, "open"),
+    statusOf(3, "open"),
+    statusOf(11, "closed"),
+    statusOf(16, "closed"),
+    statusOf(15, "merged"),
+    statusOf(13, "merged"),
+    statusOf(12, "merged"),
+  ]);
+  expect(requests.sort()).toEqual([
+    `${api}/repos/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=30`,
+    `${api}/repos/${repo}/pulls?state=open&per_page=100`,
+  ]);
+});
+
+test("recentPullRequests is empty when the repo has no pull requests", async () => {
+  const { github } = fakePulls([], []);
+  expect(await gh.recentPullRequests(github, repo)).toEqual([]);
+});
