@@ -1,0 +1,5 @@
+pre-commit:
+  commands:
+    biome:
+      glob: "*.{js,mjs,cjs,ts,mts,cts,json,jsonc,md}"
+      run: node_modules/.bin/biome lint --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}

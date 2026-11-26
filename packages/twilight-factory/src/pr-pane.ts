@@ -22,7 +22,7 @@ const rows = (pulls: PullRequestStatus[], theme: Theme, selected: number | undef
     const line = ` ${number}  ${state}  ${pr.title}${draft}`;
     return pr.number === selected ? theme.inverse(truncateToWidth(line, width, undefined, true)) : line;
   });
-  if (shown.length < pulls.length) lines.push(theme.fg("dim", ` +${pulls.length - shown.length} more`));
+  if (shown.length < pulls.length) { lines.push(theme.fg("dim", ` +${pulls.length - shown.length} more`)); }
   return lines;
 };
 
@@ -57,11 +57,17 @@ export const pullRequestPane = () => {
           tui = ui;
           close = () => done();
           return {
-            invalidate() {},
+            invalidate() {
+              // Rendering reads live state; nothing is cached.
+            },
             handleInput(data: string) {
-              if (matchesKey(data, Key.up)) move(-1);
-              else if (matchesKey(data, Key.down)) move(1);
-              else if (matchesKey(data, Key.escape) || matchesKey(data, PANE_KEY)) handle?.unfocus();
+              if (matchesKey(data, Key.up)) {
+                move(-1);
+              } else if (matchesKey(data, Key.down)) {
+                move(1);
+              } else if (matchesKey(data, Key.escape) || matchesKey(data, PANE_KEY)) {
+                handle?.unfocus();
+              }
             },
             render(width: number): string[] {
               const highlight = focused() ? selected : undefined;
@@ -83,11 +89,15 @@ export const pullRequestPane = () => {
     },
     // Pi only runs extension shortcuts from the input box, so the pane handles the key itself while focused.
     toggle: () => {
-      if (!handle) return;
+      if (!handle) {
+        return;
+      }
       if (focused()) {
         handle.unfocus();
       } else {
-        if (!shownPulls(pulls).some(pr => pr.number === selected)) selected = shownPulls(pulls)[0]?.number;
+        if (shownPulls(pulls).every(pr => pr.number !== selected)) {
+          selected = shownPulls(pulls)[0]?.number;
+        }
         handle.focus();
       }
     },

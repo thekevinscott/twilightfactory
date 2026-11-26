@@ -25,6 +25,11 @@ const split = (repo: string) => {
 
 const CLOSED_SHOWN = 5;
 
+const prState = (pr: { closed_at: string | null; merged_at: string | null }): PullRequestSummary["state"] => {
+  if (pr.closed_at === null) { return "open"; }
+  return pr.merged_at === null ? "closed" : "merged";
+};
+
 export const pullRequestSummaries = async (github: Octokit, repo: string): Promise<PullRequestSummary[]> => {
   const [open, closed] = await Promise.all([
     github.rest.pulls.list({ ...split(repo), state: "open", per_page: 100 }),
@@ -37,7 +42,7 @@ export const pullRequestSummaries = async (github: Octokit, repo: string): Promi
     draft: pr.draft ?? false,
     author: pr.user?.login ?? "",
     head: pr.head.ref,
-    state: pr.closed_at === null ? "open" : pr.merged_at === null ? "closed" : "merged",
+    state: prState(pr),
   }));
 };
 
@@ -57,7 +62,7 @@ export const pullRequestLine = (pr: PullRequestSummary): string =>
   [`#${pr.number}`, pr.state, ...(pr.draft ? ["draft"] : []), JSON.stringify(pr.title), `by ${pr.author}`, `from ${pr.head}`, pr.url].join(" ");
 
 export const issueLine = (issue: IssueSummary): string =>
-  [`#${issue.number}`, JSON.stringify(issue.title), ...(issue.labels.length ? [`[${issue.labels.join(", ")}]`] : []), issue.url].join(" ");
+  [`#${issue.number}`, JSON.stringify(issue.title), ...(issue.labels.length > 0 ? [`[${issue.labels.join(", ")}]`] : []), issue.url].join(" ");
 
 export const runLine = (run: Run): string =>
   [

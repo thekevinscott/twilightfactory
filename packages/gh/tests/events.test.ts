@@ -20,7 +20,7 @@ const fakeGitHub = () => {
     const headers = new Headers(init.headers);
     const etag = `"${JSON.stringify(state.pulls).length}-${state.pulls.length}"`;
     requests.push({ url, ifNoneMatch: headers.get("if-none-match") });
-    if (headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers: { etag } });
+    if (headers.get("if-none-match") === etag) { return new Response(null, { status: 304, headers: { etag } }); }
     return new Response(JSON.stringify(state.pulls), { status: 200, headers: { "content-type": "application/json", etag } });
   };
   return { github: gh.client("token", { request: { fetch } }), state, requests };
@@ -113,7 +113,9 @@ test("handlers run one at a time in arrival order", async () => {
   const log: string[] = [];
   events.on("pull", async event => {
     log.push(`start ${event.key}`);
-    await new Promise(resolve => setTimeout(resolve, event.data === 8 ? 20 : 0));
+    await new Promise(resolve => {
+      setTimeout(resolve, event.data === 8 ? 20 : 0);
+    });
     log.push(`end ${event.key}`);
   });
   await events.receive(await delivery("d1", { id: 8, updated_at: "t" }));
@@ -137,7 +139,10 @@ test("a poll gets the time the previous successful poll started", async () => {
   const sinces: (Date | null)[] = [];
   const { events } = setup({
     interval: 5,
-    sources: [gh.defineSource({ type: "pull", poll: async ({ since }) => (sinces.push(since), []) })],
+    sources: [gh.defineSource({ type: "pull", poll: async ({ since }) => {
+      sinces.push(since);
+      return [];
+    } })],
   });
   const before = new Date();
   await events.start();
@@ -159,7 +164,7 @@ test("a failing handler is reported and later events still run", async () => {
   const onError = vi.fn();
   const { events, seen } = setup({ onError });
   events.on("pull", event => {
-    if (event.data === 12) throw new Error("boom");
+    if (event.data === 12) { throw new Error("boom"); }
   });
   await events.receive(await delivery("d1", { id: 12, updated_at: "t" }));
   await events.receive(await delivery("d2", { id: 13, updated_at: "t" }));

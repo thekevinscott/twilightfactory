@@ -19,7 +19,7 @@ You get three attempts. An attempt ends when the GitHub run on your branch finis
 const task = (run: { id: number; url: string; headSha: string }) =>
   `Main is red. Failed tests.yml run ${run.id} at ${run.headSha}: ${run.url}`;
 
-export const registerRedFixer = (pi: ExtensionAPI): { dispose(): void } =>
+export const registerRedFixer = (pi: ExtensionAPI): { dispose: () => void } =>
   registerAgent(pi, RED_FIXER, { description: "Files a red issue for a failed run on main and pushes a fix.", systemPrompt });
 
 export const startRedFixer = (pi: ExtensionAPI, cwd: string, run: { id: number; url: string; headSha: string }): Promise<void> =>

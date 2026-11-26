@@ -12,6 +12,7 @@ const toggle = (term: Term) => term.write('\x1br');
 const highlighted = (term: Term) =>
   ROWS.filter(number => {
     const [cell] = term.getByText(number).cells;
+    // biome-ignore lint/nursery/noDanglingUnderscore: curtaincall has no public way to read a cell's reverse-video flag
     return cell !== undefined && term._getCharAt(cell.row, cell.col).reverse;
   });
 
@@ -41,7 +42,9 @@ test('Up and down move the highlight and stop at the ends', async ({ terminal })
   term.keyUp();
   term.keyUp();
   await expect.poll(() => highlighted(term)).toEqual(['#91']);
-  for (let i = 0; i < ROWS.length + 2; i++) term.keyDown();
+  for (let i = 0; i < ROWS.length + 2; i += 1) {
+    term.keyDown();
+  }
   await expect.poll(() => highlighted(term)).toEqual(['#83']);
 });
 

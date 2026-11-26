@@ -5,7 +5,7 @@ import { expect } from 'vitest';
 import { expect as expectTerminal } from 'curtaincall';
 import { test } from 'curtaincall/vitest';
 
-const screen = (term: { getBuffer(): string[][] }) => term.getBuffer().map(row => row.join('')).join('\n');
+const screen = (term: { getBuffer: () => string[][] }) => term.getBuffer().map(row => row.join('')).join('\n');
 
 const sessionFiles = (agentDir: string) =>
   readdirSync(agentDir, { recursive: true, encoding: 'utf8' }).filter(file => file.endsWith('.jsonl'));

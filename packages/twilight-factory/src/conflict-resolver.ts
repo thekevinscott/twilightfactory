@@ -18,7 +18,7 @@ const systemPrompt = `You resolve merge conflicts in an open pull request. Its b
 const task = (pr: ConflictedPullRequest) =>
   `Pull request #${pr.number} (${pr.url}) conflicts with its base. Head branch: ${pr.head} at ${pr.headSha}. Base branch: ${pr.base}.`;
 
-export const registerConflictResolver = (pi: ExtensionAPI): { dispose(): void } =>
+export const registerConflictResolver = (pi: ExtensionAPI): { dispose: () => void } =>
   registerAgent(pi, CONFLICT_RESOLVER, {
     description: "Merges the base into a conflicted pull request and resolves the conflicts, or comments when it cannot.",
     systemPrompt,

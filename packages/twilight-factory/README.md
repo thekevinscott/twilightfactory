@@ -9,7 +9,7 @@ of each workflow on that branch. Nothing here pushes.
 
 Node 24 and pnpm. Bare `tf` also needs `pi` (the Pi coding agent) on PATH.
 
-```
+```sh
 pnpm --dir packages/twilight-factory install
 pnpm --dir packages/twilight-factory run build
 ```
@@ -23,13 +23,13 @@ pnpm then skips that file and the install exits with an error.
 Every command acts on the git repo in the current directory. Install the
 `tf` command once, linked to this folder so rebuilds are picked up:
 
-```
+```text
 pnpm add -g /path/to/twilightfactory/packages/twilight-factory
 ```
 
 Commands:
 
-```
+```text
 tf daemon           run the daemon in the foreground
 tf                  open pi with the factory extension
 tf status           print the same summary as text
@@ -57,7 +57,7 @@ each. It updates as the daemon records things.
 
 Commands:
 
-```
+```text
 /tf-status            the same summary as tf status
 /tf-run [action]      run an action; no name opens a picker
 /tf-log [run id]      show a run's log; no id opens a picker of recent runs
@@ -122,7 +122,7 @@ The key is read from `github-app.pem` next to it, or from `privateKeyPath`
 `$XDG_STATE_HOME/twilightfactory/<hash of repo path>/` (default
 `~/.local/state`), one JSON file per record:
 
-```
+```text
 records/events/<id>.json
 records/actions/<id>/run.json   and output.log
 records/agents/<id>/run.json
@@ -143,7 +143,7 @@ command line, and this daemon is not Python, so there is nothing to call.
 
 ## Try it on a throwaway repo
 
-```
+```sh
 git init --bare -b main /tmp/tf/origin.git
 git clone /tmp/tf/origin.git /tmp/tf/work
 cd /tmp/tf/work

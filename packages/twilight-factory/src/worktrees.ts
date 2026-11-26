@@ -28,10 +28,11 @@ const inside = (dir: string, target: string) => target === dir || target.startsW
 // Any process whose cwd is in the worktree: a shell, an agent, a test run.
 // Linux only; elsewhere this throws and the worktree is kept.
 const processIn = async (dir: string): Promise<number | undefined> => {
-  for (const entry of await readdir("/proc")) {
-    if (!/^\d+$/.test(entry)) continue;
+  const entries = await readdir("/proc");
+  for (const entry of entries) {
+    if (!/^\d+$/.test(entry)) { continue; }
     try {
-      if (inside(dir, await readlink(`/proc/${entry}/cwd`))) return Number(entry);
+      if (inside(dir, await readlink(`/proc/${entry}/cwd`))) { return Number(entry); }
     } catch {
       // Gone, or another user's.
     }
@@ -40,16 +41,15 @@ const processIn = async (dir: string): Promise<number | undefined> => {
 };
 
 const reasonToKeep = async (main: string, { path: dir, branch }: Worktree & { branch: string }) => {
-  if (await git(dir, "status", "--porcelain")) return "uncommitted changes";
-  if ((await git(main, "rev-list", "--count", `refs/heads/${branch}`, "--not", "--remotes")) !== "0") return "unpushed commits";
+  if (await git(dir, "status", "--porcelain")) { return "uncommitted changes"; }
+  if ((await git(main, "rev-list", "--count", `refs/heads/${branch}`, "--not", "--remotes")) !== "0") { return "unpushed commits"; }
   let pid: number | undefined;
   try {
     pid = await processIn(dir);
   } catch (error) {
     return `cannot check for running processes: ${failure(error)}`;
   }
-  if (pid !== undefined) return `a process is running in it (pid ${pid})`;
-  return undefined;
+  if (pid !== undefined) { return `a process is running in it (pid ${pid})`; }
 };
 
 // Returns a line to show, or undefined when the branch has no worktree under .worktrees/.
@@ -57,14 +57,14 @@ export const removeMergedWorktree = async (cwd: string, branch: string): Promise
   const [main, ...rest] = await worktrees(cwd);
   const root = path.join(main!.path, ".worktrees");
   const worktree = rest.find(w => w.branch === branch && inside(root, w.path));
-  if (!worktree) return undefined;
+  if (!worktree) { return undefined; }
   const name = path.relative(main!.path, worktree.path);
 
   // Brings in the merge, so `git branch -d` sees the branch as merged into its upstream.
   await git(main!.path, "fetch", "origin").catch(() => undefined);
 
   const reason = await reasonToKeep(main!.path, { path: worktree.path, branch });
-  if (reason) return `kept ${name}: ${reason}`;
+  if (reason) { return `kept ${name}: ${reason}`; }
   try {
     await git(main!.path, "worktree", "remove", worktree.path);
   } catch (error) {
