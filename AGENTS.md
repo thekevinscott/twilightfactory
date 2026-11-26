@@ -31,9 +31,11 @@ Spec files are named `<name>.test.ts`, with no numeric prefix.
 
 ## Pull requests
 
-Agents merge their own PRs once CI is green.
+The repo has no required checks, on purpose. Main is guarded by tf's state machine, not by branch protection. Don't add required checks or propose them.
 
-- When a PR is complete, turn on auto-merge: `gh pr merge <number> --auto --merge`. GitHub merges it when the checks pass.
+Agents merge their own PRs.
+
+- Open a finished PR ready, with auto-merge on: `gh pr merge <number> --auto --merge`. It merges right away.
 - While `tf` runs, it turns on auto-merge (merge commit) for every pull request opened in the repo, so this usually happens without you. It polls about once a minute, skips drafts, and misses pull requests opened while it was not running.
 - Avoid turning auto-merge off (`gh pr merge --disable-auto`).
 - Don't push work that isn't ready. If you have to push it early, open the PR as a draft (`gh pr create --draft`) and turn on auto-merge only after `gh pr ready`.
