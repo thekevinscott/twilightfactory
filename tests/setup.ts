@@ -9,6 +9,7 @@ interface StartOptions {
   log?: string;
   env?: Record<string, string>;
   cols?: number;
+  rows?: number;
   cwd?: string;
 }
 
@@ -27,10 +28,10 @@ const proxyEnv = (fixture: string, log?: string) => proxy.session(fixtures(fixtu
 const proxySession = (fixture: string) => proxy.session(fixtures(fixture));
 
 // curtaincall has no cwd option, so `cwd` goes through `env -C`.
-const startTf = (terminal: TerminalFactory, { fixture, log, env = {}, cols, cwd }: StartOptions) => {
+const startTf = (terminal: TerminalFactory, { fixture, log, env = {}, cols, rows, cwd }: StartOptions) => {
   const session = proxy.session(fixtures(fixture), log);
   const command = cwd ? ['env', '-C', cwd, ...cli] : cli;
-  return { term: launch(terminal, command, session, { env, cols }), log: session.id };
+  return { term: launch(terminal, command, session, { env, cols, rows }), log: session.id };
 };
 
 const waitForStatus = async (term: Terminal, status: RegExp | string) => {

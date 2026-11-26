@@ -17,7 +17,7 @@ const highlighted = (term: Term) =>
   });
 
 const pane = async (terminal) => {
-  const { term } = startTf(terminal, { fixture: 'pr-pane/recent', env: { GH_TOKEN: 'gho_pane' }, cols: 120 });
+  const { term } = startTf(terminal, { fixture: 'pr-pane/recent', env: { GH_TOKEN: 'gho_pane' }, cols: 120, rows: 40 });
   await expectTerminal(term.getByText(/#83\s+merged/)).toBeVisible();
   return term;
 };
