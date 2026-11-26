@@ -30,6 +30,10 @@ Agents merge their own PRs once CI is green.
 - Don't push work that isn't ready. If you have to push it early, open the PR as a draft (`gh pr create --draft`) and turn on auto-merge only after `gh pr ready`.
 - To check a PR, you may dispatch `tests.yml` on your branch: `gh workflow run tests.yml --ref <branch>`. Never use `--ref main`: only `tf` dispatches runs on main, because those runs belong to its state machine.
 
+## State machine
+
+Any change to the state machine (`packages/state-machine`: its states, inputs, order of checks, or what tf does on a state) needs Kevin's explicit approval first. Propose it in an issue and wait. The approved machine is v2 in Kevin's vault note `Notes/new CI flow/dirsql markdown tests CI flow.md`.
+
 ## Issues
 
 When Kevin raises a bug, request, idea or follow-up, file a GitHub issue right away. Don't ask first.
