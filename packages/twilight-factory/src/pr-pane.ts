@@ -26,7 +26,8 @@ const rows = (pulls: PullRequestStatus[], theme: Theme, selected: number | undef
   return lines;
 };
 
-// Open pull requests and the most recently closed, pinned over the top rows of chat.
+// Open pull requests and the most recently closed, pinned to the top of Pi.
+// A blank header of the same height keeps chat, and tf's notices, from starting under it.
 export const pullRequestPane = () => {
   let pulls: PullRequestStatus[] = [];
   let error: string | undefined;
@@ -45,6 +46,12 @@ export const pullRequestPane = () => {
   };
 
   const empty = () => pulls.length === 0 && error === undefined;
+  const render = (width: number, theme: Theme) => {
+    const highlight = focused() ? selected : undefined;
+    const lines =
+      error === undefined ? rows(pulls, theme, highlight, width) : [theme.fg("error", ` pull requests: ${error}`)];
+    return [...lines, theme.fg("borderMuted", "─".repeat(width))].map(line => truncateToWidth(line, width));
+  };
   const update = () => {
     handle?.setHidden(empty());
     tui?.requestRender();
@@ -52,6 +59,12 @@ export const pullRequestPane = () => {
 
   return {
     attach: (ctx: ExtensionContext) => {
+      ctx.ui.setHeader((_ui, theme) => ({
+        invalidate() {
+          // Rendering reads live state; nothing is cached.
+        },
+        render: (width: number) => (empty() ? [] : render(width, theme).map(() => "")),
+      }));
       void ctx.ui.custom<void>(
         (ui, theme, _keybindings, done) => {
           tui = ui;
@@ -69,12 +82,7 @@ export const pullRequestPane = () => {
                 handle?.unfocus();
               }
             },
-            render(width: number): string[] {
-              const highlight = focused() ? selected : undefined;
-              const lines =
-                error === undefined ? rows(pulls, theme, highlight, width) : [theme.fg("error", ` pull requests: ${error}`)];
-              return [...lines, theme.fg("borderMuted", "─".repeat(width))].map(line => truncateToWidth(line, width));
-            },
+            render: (width: number) => render(width, theme),
           };
         },
         {

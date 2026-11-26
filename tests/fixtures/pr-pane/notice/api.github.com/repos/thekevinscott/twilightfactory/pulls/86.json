@@ -1,0 +1,23 @@
+{
+    "number": 86,
+    "node_id": "PR_node86",
+    "title": "Merged on the 3rd",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/86",
+    "draft": false,
+    "user": {
+        "login": "thekevinbot"
+    },
+    "head": {
+        "ref": "branch-86",
+        "sha": "sha86"
+    },
+    "base": {
+        "ref": "main"
+    },
+    "created_at": "2026-11-01T00:00:00Z",
+    "updated_at": "2026-11-24T20:00:00Z",
+    "closed_at": "2026-11-03T00:00:00Z",
+    "merged_at": "2026-11-03T00:00:00Z",
+    "mergeable_state": "clean"
+}
