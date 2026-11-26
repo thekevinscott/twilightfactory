@@ -46,7 +46,6 @@ const currentState = async (
   let headSha: string | undefined;
   const seen: { lastRun?: gh.Run | null } = {};
   const inputs: Inputs = {
-    hasWorkflow: () => gh.hasWorkflow(github, repo),
     lastRun: async () => (seen.lastRun = await gh.lastRun(github, repo)),
     lastMeasuredRun: () => gh.lastMeasuredRun(github, repo),
     head: async () => (headSha = await gh.head(github, repo)),

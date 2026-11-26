@@ -4,14 +4,10 @@ export interface Run {
   conclusion: string;
   createdAt: string;
   headSha: string;
-  // The workflow's run-name, "Tests (plain)" or "Tests (measured)".
-  displayTitle?: string;
 }
 
 // Each input is fetched only when the state depends on it.
 export interface Inputs<Args extends unknown[] = []> {
-  // Whether the repo has the tests workflow tf runs.
-  hasWorkflow: (...args: Args) => Promise<boolean>;
   // The latest run of either kind, plain or measured.
   lastRun: (...args: Args) => Promise<Run | null>;
   lastMeasuredRun: (...args: Args) => Promise<Run | null>;
@@ -23,12 +19,7 @@ export interface Inputs<Args extends unknown[] = []> {
   blockedPullRequests: (...args: Args) => Promise<number>;
 }
 
-export type State =
-  | "NOT_SET_UP"
-  | "QUIET"
-  | "RUNNING_PLAIN"
-  | "RUNNING_MEASURED"
-  | "FIXING" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
+export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -38,25 +29,22 @@ export const state = async <Args extends unknown[]>(
   args: Args,
   now: Date = new Date(),
 ): Promise<State> => {
-  if (!(await inputs.hasWorkflow(...args))) {
-    return "NOT_SET_UP";
-  }
   const lastRun = await inputs.lastRun(...args);
   if (lastRun === null) {
     return "GO_MEASURED";
   }
   if (lastRun.status !== "completed") {
-    return lastRun.displayTitle?.includes("(measured)") ? "RUNNING_MEASURED" : "RUNNING_PLAIN";
+    return "STOP";
   }
   // GitHub reports a job timeout as cancelled, so anything short of success is red.
   if (lastRun.conclusion !== "success") {
-    return (await inputs.openRedIssue(...args)) ? "FIXING" : "FILE_ISSUE";
+    return (await inputs.openRedIssue(...args)) ? "STOP" : "FILE_ISSUE";
   }
   if ((await inputs.blockedPullRequests(...args)) > 0) {
     return "RECHECK_PRS";
   }
   if (now.getTime() - new Date(lastRun.createdAt).getTime() < HOUR) {
-    return "QUIET";
+    return "STOP";
   }
   const lastMeasuredRun = await inputs.lastMeasuredRun(...args);
   // A fix confirmed by a plain run says nothing about the speed or memory failure it followed.
@@ -64,7 +52,7 @@ export const state = async <Args extends unknown[]>(
     return "GO_MEASURED";
   }
   if (lastRun.headSha === (await inputs.head(...args))) {
-    return "QUIET";
+    return "STOP";
   }
   if (lastMeasuredRun === null || now.getTime() - new Date(lastMeasuredRun.createdAt).getTime() >= DAY) {
     return "GO_MEASURED";

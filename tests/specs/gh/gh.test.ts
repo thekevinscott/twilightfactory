@@ -36,30 +36,13 @@ const run = (id: number, displayTitle: string, extra: Record<string, string> = {
 });
 
 test('It sends the token in the authorization header', async () => {
-  const { requests } = await call('workflow', gh.hasWorkflow, [], { token: 'gho_sent' });
+  const { requests } = await call('runs', gh.lastRun, [], { token: 'gho_sent' });
   expect(requests.map(request => request.authorization)).toEqual(['token gho_sent']);
 });
 
 test('It passes client options through to Octokit', async () => {
-  const { value, requests } = await call('enterprise', gh.hasWorkflow, [], { options: { baseUrl: 'https://ghe.example.com/api/v3' } });
-  expect(value).toBe(true);
-  expect(requests.map(request => request.url)).toEqual([`https://ghe.example.com/api/v3/repos/${repo}/actions/workflows/tests.yml`]);
-});
-
-test('It finds the tests workflow', async () => {
-  const { value, requests } = await call('workflow', gh.hasWorkflow);
-  expect(value).toBe(true);
-  expect(requests.map(({ method, url }) => ({ method, url }))).toEqual([{ method: 'GET', url: workflow }]);
-});
-
-test('It reports no tests workflow when GitHub answers 404', async () => {
-  expect((await call('no-workflow', gh.hasWorkflow)).value).toBe(false);
-});
-
-test('It throws when GitHub fails to look up the workflow', async () => {
-  const { value, error } = await call('workflow-error', gh.hasWorkflow);
-  expect(value).toBeUndefined();
-  expect(error.status).toBe(500);
+  const { requests } = await call('enterprise', gh.lastRun, [], { options: { baseUrl: 'https://ghe.example.com/api/v3' } });
+  expect(requests.map(request => request.url)).toEqual([`https://ghe.example.com/api/v3/repos/${repo}/actions/workflows/tests.yml/runs?branch=main&per_page=1`]);
 });
 
 test('It returns the newest run of tests.yml on main', async () => {

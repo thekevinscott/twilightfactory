@@ -50,22 +50,6 @@ const run = (displayTitle: string, id = 1, conclusion = "success"): gh.Run => ({
 const runsUrl = (perPage: number) =>
   `${api}/repos/owner/name/actions/workflows/${gh.WORKFLOW}/runs?branch=main&per_page=${perPage}`;
 
-test("hasWorkflow is true when the tests workflow exists", async () => {
-  const { github, requests } = fake({ id: 1, path: ".github/workflows/tests.yml" });
-  expect(await gh.hasWorkflow(github, repo)).toBe(true);
-  expect(requests).toEqual([{ method: "GET", url: `${api}/repos/${repo}/actions/workflows/tests.yml` }]);
-});
-
-test("hasWorkflow is false when the tests workflow is missing", async () => {
-  const { github } = fake({ message: "Not Found" }, 404);
-  expect(await gh.hasWorkflow(github, repo)).toBe(false);
-});
-
-test("hasWorkflow rejects on other errors", async () => {
-  const { github } = fake({ message: "Server Error" }, 500);
-  await expect(gh.hasWorkflow(github, repo)).rejects.toThrow();
-});
-
 test("lastRun returns the newest run on main", async () => {
   const { github, requests } = fake({ workflow_runs: [apiRun("Tests (plain)")] });
   expect(await gh.lastRun(github, repo)).toEqual(run("Tests (plain)"));
