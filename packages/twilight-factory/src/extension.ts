@@ -6,7 +6,7 @@ import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { chatContext } from "./chat-context.js";
 import { stateDisplay } from "./footer.js";
 import { registerRedFixer, startRedFixer } from "./red-fixer.js";
-import { githubToken, NoClientIdError, type Verification } from "./token.js";
+import { appConfigFile, githubToken, NoClientIdError, type Verification } from "./token.js";
 import { removeMergedWorktree } from "./worktrees.js";
 
 const REFRESH_MS = Number(process.env.TF_REFRESH_MS) || 60 * 1000;
@@ -40,6 +40,8 @@ const currentState = async (
     throw error;
   }
   const github = gh.client(token);
+  // Read on every refresh so a broken app config shows in the footer rather than falling back to the user.
+  const app = await gh.readAppConfig(appConfigFile());
   const repo = await githubRepo(cwd);
   let headSha: string | undefined;
   const seen: { lastRun?: gh.Run | null } = {};
@@ -56,7 +58,7 @@ const currentState = async (
     // GO_MEASURED can be decided before the state machine reads head.
     const sha = headSha ?? (await inputs.head());
     if (sha !== startedFor) {
-      await gh.startRun(github, repo, state === "GO_PLAIN" ? "plain" : "measured");
+      await gh.startRun(gh.dispatchClient(token, app), repo, state === "GO_PLAIN" ? "plain" : "measured");
       startedFor = sha;
     }
   }
