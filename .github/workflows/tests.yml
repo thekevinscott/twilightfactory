@@ -41,4 +41,6 @@ jobs:
               (cd .deps/curtaincall/packages/ts; pnpm install; pnpm run build)
               pnpm pkg set devDependencies.curtaincall=link:./.deps/curtaincall/packages/ts
               just install'
+      - name: Lint
+        run: docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" tf-tests just lint
       - run: just test

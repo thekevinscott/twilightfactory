@@ -29,6 +29,7 @@ const run = (id: number, displayTitle: string, extra: Record<string, string> = {
   status: 'completed',
   conclusion: 'success',
   createdAt: `2026-11-24T${id}:00:00Z`,
+  // biome-ignore lint/security/noSecrets: a fake sha
   headSha: 'abcdef0123456789',
   displayTitle,
   url: `https://github.com/${repo}/actions/runs/${id}`,
@@ -76,6 +77,7 @@ test('It returns no measured run when tests.yml has never run', async () => {
 
 test('It returns the sha of HEAD', async () => {
   const { value, requests } = await call('head', gh.head);
+  // biome-ignore lint/security/noSecrets: a fake sha
   expect(value).toBe('feedface00112233445566778899aabbccddeeff');
   expect(requests.map(request => request.url)).toEqual([`${api}/commits/HEAD`]);
 });

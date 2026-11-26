@@ -21,7 +21,7 @@ const about = (cwd: string, repo: string) =>
     `For live state call ${TOOLS.join(", ")}; each fetches from GitHub when called.`,
   ].join("\n");
 
-const text = (lines: string[]) => ({ content: [{ type: "text" as const, text: lines.length ? lines.join("\n") : "none" }], details: {} });
+const text = (lines: string[]) => ({ content: [{ type: "text" as const, text: lines.length > 0 ? lines.join("\n") : "none" }], details: {} });
 
 export const chatContext = (pi: ExtensionAPI, { repo, github, state }: ChatContextOptions) => {
   let section: string | undefined;
@@ -33,7 +33,7 @@ export const chatContext = (pi: ExtensionAPI, { repo, github, state }: ChatConte
   });
 
   pi.on("before_agent_start", event => {
-    if (section) event.systemPromptOptions.sections.twilight_factory = section;
+    if (section) { event.systemPromptOptions.sections.twilight_factory = section; }
   });
 
   const fetchTool = (name: (typeof TOOLS)[number], description: string, lines: (github: Octokit, repo: string) => Promise<string[]>) =>
@@ -54,13 +54,13 @@ export const chatContext = (pi: ExtensionAPI, { repo, github, state }: ChatConte
     parameters: Type.Object({}),
     execute: async () => text([state() ?? "not known yet"]),
   });
-  fetchTool("tf_pull_requests", "Open pull requests and the last few closed ones, one per line.", async (github, repo) =>
-    (await gh.pullRequestSummaries(github, repo)).map(gh.pullRequestLine),
+  fetchTool("tf_pull_requests", "Open pull requests and the last few closed ones, one per line.", async (octokit, name) =>
+    (await gh.pullRequestSummaries(octokit, name)).map(gh.pullRequestLine),
   );
-  fetchTool("tf_issues", "Open issues (not pull requests), one per line.", async (github, repo) =>
-    (await gh.openIssues(github, repo)).map(gh.issueLine),
+  fetchTool("tf_issues", "Open issues (not pull requests), one per line.", async (octokit, name) =>
+    (await gh.openIssues(octokit, name)).map(gh.issueLine),
   );
-  fetchTool("tf_ci_runs", `Recent ${gh.WORKFLOW} runs on main, newest first: kind, status, conclusion, head, URL.`, async (github, repo) =>
-    (await gh.recentRuns(github, repo)).map(gh.runLine),
+  fetchTool("tf_ci_runs", `Recent ${gh.WORKFLOW} runs on main, newest first: kind, status, conclusion, head, URL.`, async (octokit, name) =>
+    (await gh.recentRuns(octokit, name)).map(gh.runLine),
   );
 };
