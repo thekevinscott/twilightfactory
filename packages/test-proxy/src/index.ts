@@ -153,8 +153,8 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
 
 /** Runs `command` through a terminal factory (e.g. curtaincall's) with the session's proxy env. */
 export const launch = <T>(
-  terminal: (command: string, options: { env: Record<string, string>; cols?: number }) => T,
+  terminal: (command: string, options: { env: Record<string, string>; cols?: number; rows?: number }) => T,
   command: string[],
   session: Pick<Session, "env">,
-  { env = {}, cols }: { env?: Record<string, string>; cols?: number } = {},
-): T => terminal(command.join(" "), { cols, env: { ...session.env, ...env } });
+  { env = {}, cols, rows }: { env?: Record<string, string>; cols?: number; rows?: number } = {},
+): T => terminal(command.join(" "), { cols, rows, env: { ...session.env, ...env } });
