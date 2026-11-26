@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "devDependencies": {
-    "@biomejs/biome": "^2.6.8",
+    "@biomejs/biome": "2.6.8",
     "@types/node": "^24.0.0",
     "curtaincall": "link:/home/duncan/work/code/projects/developer-tooling/curtaincall/packages/ts",
-    "lefthook": "^2.2.2",
+    "lefthook": "2.2.2",
     "test-proxy": "link:./packages/test-proxy",
     "twilight-gh": "link:./packages/gh",
     "twilight-state-machine": "link:./packages/state-machine",
