@@ -20,6 +20,8 @@ just test tests/specs/twilight-factory/basic.test.ts
 
 Lint and typecheck locally are fine.
 
+Spec files are named `<name>.test.ts`, with no numeric prefix.
+
 ## Pull requests
 
 Agents merge their own PRs once CI is green.
