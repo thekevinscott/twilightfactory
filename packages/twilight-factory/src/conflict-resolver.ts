@@ -22,6 +22,7 @@ export const registerConflictResolver = (pi: ExtensionAPI): { dispose: () => voi
   registerAgent(pi, CONFLICT_RESOLVER, {
     description: "Merges the base into a conflicted pull request and resolves the conflicts, or comments when it cannot.",
     systemPrompt,
+    model: "claude-bridge/claude-haiku-5-5",
   });
 
 export const startConflictResolver = (pi: ExtensionAPI, cwd: string, pr: ConflictedPullRequest): Promise<void> =>
