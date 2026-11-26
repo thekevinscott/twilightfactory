@@ -25,8 +25,22 @@ const repoWith = (...branches: string[]) => {
 
 const hasBranch = (repo: string, branch: string) => git(repo, 'branch', '--list', branch) !== '';
 
-const startIn = (terminal: Parameters<typeof startTf>[0], repo: string) =>
-  startTf(terminal, { fixture: 'worktrees/closed', cwd: repo, cols: 160, env: { GH_TOKEN: 'gho_worktrees', TF_POLL_MS: '50' } }).term;
+// Points main's upstream at a local bare repo one commit ahead, so `git pull` works without a network.
+const upstreamAhead = (repo: string) => {
+  const bare = mkdtempSync(path.join(tmpdir(), 'tf-upstream-'));
+  git(bare, 'init', '-q', '--bare', '-b', 'main');
+  git(repo, 'push', '-q', bare, 'main');
+  const clone = mkdtempSync(path.join(tmpdir(), 'tf-clone-'));
+  git(clone, 'clone', '-q', bare, '.');
+  git(clone, 'commit', '-q', '--allow-empty', '-m', 'merged upstream');
+  git(clone, 'push', '-q', 'origin', 'main');
+  git(repo, 'config', 'branch.main.remote', bare);
+  git(repo, 'config', 'branch.main.merge', 'refs/heads/main');
+  return git(clone, 'rev-parse', '--short', 'HEAD');
+};
+
+const startIn = (terminal: Parameters<typeof startTf>[0], repo: string, fixture = 'worktrees/closed') =>
+  startTf(terminal, { fixture, cwd: repo, cols: 160, env: { GH_TOKEN: 'gho_worktrees', TF_POLL_MS: '50' } }).term;
 
 test('It removes the worktree and branch of a merged pull request', async ({ terminal }) => {
   const repo = repoWith('merged');
@@ -35,11 +49,54 @@ test('It removes the worktree and branch of a merged pull request', async ({ ter
   expect(hasBranch(repo, 'merged')).toBe(false);
 });
 
-test('It leaves the worktree of a pull request closed without merging', async ({ terminal }) => {
-  const repo = repoWith('unmerged', 'merged');
-  await waitForStatus(startIn(terminal, repo), '#44 merged: removed .worktrees/merged');
-  expect(existsSync(path.join(repo, '.worktrees/unmerged'))).toBe(true);
-  expect(hasBranch(repo, 'unmerged')).toBe(true);
+test('It removes the worktree and branch of a pull request closed without merging', async ({ terminal }) => {
+  const repo = repoWith('unmerged');
+  await waitForStatus(startIn(terminal, repo), '#41 closed: removed .worktrees/unmerged and branch unmerged');
+  expect(existsSync(path.join(repo, '.worktrees/unmerged'))).toBe(false);
+  expect(hasBranch(repo, 'unmerged')).toBe(false);
+});
+
+test('It removes at startup a worktree whose pushed branch is merged into main', async ({ terminal }) => {
+  const repo = repoWith('old');
+  git(repo, 'update-ref', 'refs/remotes/origin/old', 'old');
+  await waitForStatus(startIn(terminal, repo, 'worktrees/none'), 'old merged into main: removed .worktrees/old and branch old');
+  expect(existsSync(path.join(repo, '.worktrees/old'))).toBe(false);
+  expect(hasBranch(repo, 'old')).toBe(false);
+});
+
+test('It keeps a new worktree that has not been pushed', async ({ terminal }) => {
+  const repo = repoWith('old');
+  git(repo, 'update-ref', 'refs/remotes/origin/old', 'old');
+  git(repo, 'worktree', 'add', '-q', '.worktrees/fresh', '-b', 'fresh', 'origin/main');
+  await waitForStatus(startIn(terminal, repo, 'worktrees/none'), 'old merged into main: removed .worktrees/old');
+  expect(existsSync(path.join(repo, '.worktrees/fresh'))).toBe(true);
+  expect(hasBranch(repo, 'fresh')).toBe(true);
+});
+
+test('It fast-forwards main when a pull request merges', async ({ terminal }) => {
+  const repo = repoWith();
+  const sha = upstreamAhead(repo);
+  await waitForStatus(startIn(terminal, repo), `tf: pulled main to ${sha}`);
+  expect(git(repo, 'rev-parse', '--short', 'main')).toBe(sha);
+});
+
+test('It leaves main alone when it has uncommitted changes', async ({ terminal }) => {
+  const repo = repoWith();
+  writeFileSync(path.join(repo, 'tracked.txt'), 'one\n');
+  git(repo, 'add', 'tracked.txt');
+  git(repo, 'commit', '-q', '-m', 'tracked');
+  const before = git(repo, 'rev-parse', 'main');
+  upstreamAhead(repo);
+  writeFileSync(path.join(repo, 'tracked.txt'), 'two\n');
+  await waitForStatus(startIn(terminal, repo), 'tf: did not pull main: uncommitted changes');
+  expect(git(repo, 'rev-parse', 'main')).toBe(before);
+});
+
+test('It leaves the checkout alone when it is not on main', async ({ terminal }) => {
+  const repo = repoWith();
+  upstreamAhead(repo);
+  git(repo, 'checkout', '-q', '-b', 'elsewhere');
+  await waitForStatus(startIn(terminal, repo), 'tf: did not pull main: the checkout is on elsewhere');
 });
 
 test('It keeps the worktree of a merged pull request with uncommitted changes', async ({ terminal }) => {
