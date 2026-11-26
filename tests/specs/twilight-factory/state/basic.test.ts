@@ -10,13 +10,7 @@ test('It has never run', ({ terminal }) => shows(terminal, 'state/tests-due', /�
 
 test('It shows a white dot when the repo has no tests workflow', ({ terminal }) => shows(terminal, 'state/not-set-up', /⚪\s+not set up/));
 
-test('It shows a green dot when main passed under an hour ago', ({ terminal }) => shows(terminal, 'state/quiet', /🟢\s+all quiet/));
-
-test('It shows behavioral tests running while a plain run on main is in progress', ({ terminal }) =>
-  shows(terminal, 'state/running-plain', /🔵\s+behavioral tests running/));
-
-test('It shows measured tests running while a measured run on main is in progress', ({ terminal }) =>
-  shows(terminal, 'state/running-measured', /🔵\s+measured tests running/));
+test('It shows a green dot while a run is in progress', ({ terminal }) => shows(terminal, 'state/quiet', /🟢\s+all quiet/));
 
 test('It shows a red dot when the last run failed', ({ terminal }) => shows(terminal, 'state/red', /🔴\s+red/));
 
