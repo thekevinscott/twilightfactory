@@ -1,0 +1,5 @@
+[
+  {"number": 101, "title": "Open fixture pull request", "html_url": "https://github.com/thekevinscott/twilightfactory/pull/101", "draft": false, "user": {"login": "thekevinbot"}, "head": {"ref": "fixture-open"}, "closed_at": null, "merged_at": null},
+  {"number": 102, "title": "Draft fixture pull request", "html_url": "https://github.com/thekevinscott/twilightfactory/pull/102", "draft": true, "user": {"login": "thekevinbot"}, "head": {"ref": "fixture-draft"}, "closed_at": null, "merged_at": null},
+  {"number": 100, "title": "Merged fixture pull request", "html_url": "https://github.com/thekevinscott/twilightfactory/pull/100", "draft": false, "user": {"login": "thekevinbot"}, "head": {"ref": "fixture-merged"}, "closed_at": "2026-11-24T10:00:00Z", "merged_at": "2026-11-24T10:00:00Z"}
+]

@@ -50,22 +50,6 @@ const run = (displayTitle: string, id = 1, conclusion = "success"): gh.Run => ({
 const runsUrl = (perPage: number) =>
   `${api}/repos/owner/name/actions/workflows/${gh.WORKFLOW}/runs?branch=main&per_page=${perPage}`;
 
-test("hasWorkflow is true when the tests workflow exists", async () => {
-  const { github, requests } = fake({ id: 1, path: ".github/workflows/tests.yml" });
-  expect(await gh.hasWorkflow(github, repo)).toBe(true);
-  expect(requests).toEqual([{ method: "GET", url: `${api}/repos/${repo}/actions/workflows/tests.yml` }]);
-});
-
-test("hasWorkflow is false when the tests workflow is missing", async () => {
-  const { github } = fake({ message: "Not Found" }, 404);
-  expect(await gh.hasWorkflow(github, repo)).toBe(false);
-});
-
-test("hasWorkflow rejects on other errors", async () => {
-  const { github } = fake({ message: "Server Error" }, 500);
-  await expect(gh.hasWorkflow(github, repo)).rejects.toThrow();
-});
-
 test("lastRun returns the newest run on main", async () => {
   const { github, requests } = fake({ workflow_runs: [apiRun("Tests (plain)")] });
   expect(await gh.lastRun(github, repo)).toEqual(run("Tests (plain)"));
@@ -113,39 +97,6 @@ test.for([
   ]);
 });
 
-test("blockedPullRequests returns pull requests whose main-is-green check failed", async () => {
-  const check = (workflow: string, conclusion: string, databaseId: number) => ({
-    conclusion,
-    checkSuite: { workflowRun: { databaseId, workflow: { name: workflow } } },
-  });
-  const pull = (number: number, checks: unknown[] | null) => ({
-    number,
-    commits: { nodes: [{ commit: { statusCheckRollup: checks && { contexts: { nodes: checks } } } }] },
-  });
-  const { github, requests } = fake({
-    data: {
-      repository: {
-        pullRequests: {
-          nodes: [
-            pull(1, [check(gh.MAIN_IS_GREEN, "FAILURE", 11)]),
-            pull(2, [check(gh.MAIN_IS_GREEN, "SUCCESS", 12)]),
-            pull(3, [check("Lint", "FAILURE", 13)]),
-            pull(4, null),
-            pull(5, [check("Lint", "SUCCESS", 14), check(gh.MAIN_IS_GREEN, "FAILURE", 15)]),
-            pull(6, [{}]),
-          ],
-        },
-      },
-    },
-  });
-  expect(await gh.blockedPullRequests(github, repo)).toEqual([
-    { number: 1, runId: 11 },
-    { number: 5, runId: 15 },
-  ]);
-  expect(requests).toHaveLength(1);
-  expect(requests[0]).toMatchObject({ method: "POST", url: `${api}/graphql`, body: { variables: { owner: "owner", repo: "name" } } });
-});
-
 test.for(["plain", "measured"] as const)("startRun starts a %s run on main", async kind => {
   const { github, requests } = fake(null, 204);
   await gh.startRun(github, repo, kind);
@@ -172,12 +123,6 @@ test("fileIssue opens a red issue pointing at the run", async () => {
       },
     },
   ]);
-});
-
-test("rerunCheck re-runs the failed jobs of a run", async () => {
-  const { github, requests } = fake({}, 201);
-  await gh.rerunCheck(github, repo, 15);
-  expect(requests).toEqual([{ method: "POST", url: `${api}/repos/owner/name/actions/runs/15/rerun-failed-jobs` }]);
 });
 
 test("an API error rejects", async () => {

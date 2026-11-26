@@ -15,7 +15,7 @@ Run one test by its name with vitest's `-t` filter, or one file by its path:
 
 ```sh
 just test -t 'It shows help'
-just test tests/specs/twilight-factory/01-basic.test.ts
+just test tests/specs/twilight-factory/basic.test.ts
 ```
 
 Lint and typecheck locally are fine.
@@ -28,6 +28,19 @@ Agents merge their own PRs once CI is green.
 - While `tf` runs, it turns on auto-merge (merge commit) for every pull request opened in the repo, so this usually happens without you. It polls about once a minute, skips drafts, and misses pull requests opened while it was not running.
 - Avoid turning auto-merge off (`gh pr merge --disable-auto`).
 - Don't push work that isn't ready. If you have to push it early, open the PR as a draft (`gh pr create --draft`) and turn on auto-merge only after `gh pr ready`.
+- To check a PR, you may dispatch `tests.yml` on your branch: `gh workflow run tests.yml --ref <branch>`. Never use `--ref main`: only `tf` dispatches runs on main, because those runs belong to its state machine.
+
+## State machine
+
+Any change to the state machine (`packages/state-machine`: its states, inputs, order of checks, or what tf does on a state) needs Kevin's explicit approval first. Propose it in an issue and wait. The approved machine is v2 in Kevin's vault note `Notes/new CI flow/dirsql markdown tests CI flow.md`.
+
+## Issues
+
+When Kevin raises a bug, request, idea or follow-up, file a GitHub issue right away. Don't ask first.
+
+- Put Kevin's words in the body. Add links, run IDs or file paths as context.
+- One concern per issue.
+- Questions that only ask for information don't need an issue.
 
 ## Worktrees
 

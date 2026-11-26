@@ -3,14 +3,9 @@ import { truncateToWidth, visibleWidth, type TUI } from "@earendil-works/pi-tui"
 
 const labels: Record<string, [dot: string, text: string]> = {
   "…": ["⚪", "checking"],
-  NOT_SET_UP: ["⚪", "not set up"],
-  QUIET: ["🟢", "all quiet"],
-  RUNNING_PLAIN: ["🔵", "behavioral tests running"],
-  RUNNING_MEASURED: ["🔵", "measured tests running"],
-  FIXING: ["🔴", "fixing"],
+  STOP: ["⚪", "waiting"],
   GO_PLAIN: ["🔵", "tests due"],
   GO_MEASURED: ["🔵", "tests due"],
-  RECHECK_PRS: ["🟡", "PRs blocked"],
   FILE_ISSUE: ["🔴", "red"],
   SIGN_IN: ["🟡", "sign in to GitHub"],
 };

@@ -1,0 +1,7 @@
+{
+  "subagents": {
+    "agentOverrides": {
+      "red-fixer": { "model": "fake/fake" }
+    }
+  }
+}

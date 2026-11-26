@@ -3,7 +3,6 @@ import { Octokit } from "@octokit/rest";
 // Conventions tf sets up in every repo.
 export const WORKFLOW = "tests.yml";
 export const RED_LABEL = "red";
-export const MAIN_IS_GREEN = "Main is green";
 
 export type Kind = "plain" | "measured";
 
@@ -15,11 +14,6 @@ export interface Run {
   headSha: string;
   displayTitle: string;
   url: string;
-}
-
-export interface BlockedPullRequest {
-  number: number;
-  runId: number;
 }
 
 export const client = (token: string, options: ConstructorParameters<typeof Octokit>[0] = {}): Octokit =>
@@ -49,15 +43,7 @@ const runs = async (github: Octokit, repo: string, perPage: number): Promise<Run
   }));
 };
 
-export const hasWorkflow = async (github: Octokit, repo: string): Promise<boolean> => {
-  try {
-    await github.rest.actions.getWorkflow({ ...split(repo), workflow_id: WORKFLOW });
-    return true;
-  } catch (error) {
-    if ((error as { status?: number }).status === 404) return false;
-    throw error;
-  }
-};
+export const recentRuns = (github: Octokit, repo: string, count = 10): Promise<Run[]> => runs(github, repo, count);
 
 export const lastRun = async (github: Octokit, repo: string): Promise<Run | null> =>
   (await runs(github, repo, 1))[0] ?? null;
@@ -74,61 +60,6 @@ export const openRedIssue = async (github: Octokit, repo: string): Promise<boole
   return data.some(issue => !issue.pull_request);
 };
 
-const blockedQuery = `
-query($owner: String!, $repo: String!) {
-  repository(owner: $owner, name: $repo) {
-    pullRequests(states: OPEN, first: 100) {
-      nodes {
-        number
-        commits(last: 1) {
-          nodes {
-            commit {
-              statusCheckRollup {
-                contexts(first: 100) {
-                  nodes {
-                    ... on CheckRun {
-                      conclusion
-                      checkSuite { workflowRun { databaseId workflow { name } } }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}`;
-
-interface CheckRun {
-  conclusion?: string | null;
-  checkSuite?: { workflowRun: { databaseId: number; workflow: { name: string } } | null };
-}
-
-interface BlockedResponse {
-  repository: {
-    pullRequests: {
-      nodes: {
-        number: number;
-        commits: { nodes: { commit: { statusCheckRollup: { contexts: { nodes: CheckRun[] } } | null } }[] };
-      }[];
-    };
-  };
-}
-
-export const blockedPullRequests = async (github: Octokit, repo: string): Promise<BlockedPullRequest[]> => {
-  const data = await github.graphql<BlockedResponse>(blockedQuery, split(repo));
-  return data.repository.pullRequests.nodes.flatMap(({ number, commits }) => {
-    const checks = commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? [];
-    const failed = checks.find(
-      check => check.conclusion === "FAILURE" && check.checkSuite?.workflowRun?.workflow.name === MAIN_IS_GREEN,
-    );
-    const runId = failed?.checkSuite?.workflowRun?.databaseId;
-    return runId === undefined ? [] : [{ number, runId }];
-  });
-};
-
 export const startRun = async (github: Octokit, repo: string, kind: Kind): Promise<void> => {
   await github.rest.actions.createWorkflowDispatch({ ...split(repo), workflow_id: WORKFLOW, ref: "main", inputs: { kind } });
 };
@@ -140,10 +71,6 @@ export const fileIssue = async (github: Octokit, repo: string, run: Run): Promis
     title: `main is red at ${run.headSha.slice(0, 7)}`,
     body: `${run.displayTitle} failed: ${run.url}`,
   });
-};
-
-export const rerunCheck = async (github: Octokit, repo: string, runId: number): Promise<void> => {
-  await github.rest.actions.reRunWorkflowFailedJobs({ ...split(repo), run_id: runId });
 };
 
 export interface PullRequestStatus {
@@ -191,3 +118,5 @@ export const confirmFix = async (github: Octokit, repo: string): Promise<Kind> =
 };
 export * from "./events.js";
 export * from "./pull-requests.js";
+export * from "./summaries.js";
+export * from "./app.js";

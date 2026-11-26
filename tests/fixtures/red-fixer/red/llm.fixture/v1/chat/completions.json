@@ -1,0 +1,6 @@
+data: {"id":"fake","object":"chat.completion.chunk","created":0,"model":"fake","choices":[{"index":0,"delta":{"role":"assistant","content":"Filed nothing; this is a fake model."},"finish_reason":null}]}
+
+data: {"id":"fake","object":"chat.completion.chunk","created":0,"model":"fake","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}
+
+data: [DONE]
+
