@@ -12,6 +12,8 @@ test('It shows a white dot while a run is in progress', ({ terminal }) => shows(
 
 test('It shows a red dot when the last run failed', ({ terminal }) => shows(terminal, 'state/red', /🔴\s+red/));
 
+test('It is not red when the last run was cancelled', ({ terminal }) => shows(terminal, 'state/cancelled', /🔵\s+tests due/));
+
 test('It shows a yellow dot while waiting for GitHub sign-in', ({ terminal }) =>
   shows(terminal, 'token/sign-in-pending', /🟡\s+sign in to GitHub/, {
     XDG_CONFIG_HOME: mkdtempSync(path.join(tmpdir(), 'tf-config-')),

@@ -42,18 +42,22 @@ test('It sends the token in the authorization header', async () => {
 
 test('It passes client options through to Octokit', async () => {
   const { requests } = await call('enterprise', gh.lastRun, [], { options: { baseUrl: 'https://ghe.example.com/api/v3' } });
-  expect(requests.map(request => request.url)).toEqual([`https://ghe.example.com/api/v3/repos/${repo}/actions/workflows/tests.yml/runs?branch=main&per_page=1`]);
+  expect(requests.map(request => request.url)).toEqual([`https://ghe.example.com/api/v3/repos/${repo}/actions/workflows/tests.yml/runs?branch=main&per_page=100`]);
 });
 
 test('It returns the newest run of tests.yml on main', async () => {
   const { value, requests } = await call('runs', gh.lastRun);
   expect(value).toEqual(run(14, 'Tests (plain)', { headSha: '1414141414141414' }));
-  expect(requests.map(request => request.url)).toEqual([`${workflow}/runs?branch=main&per_page=1`]);
+  expect(requests.map(request => request.url)).toEqual([`${workflow}/runs?branch=main&per_page=100`]);
 });
 
 test('It returns an unfinished run with an empty conclusion', async () => {
   const { value } = await call('in-progress', gh.lastRun);
   expect(value).toEqual(run(20, 'Tests (plain)', { status: 'in_progress', conclusion: '' }));
+});
+
+test('It skips runs that ended without passing or failing when finding the last run', async () => {
+  expect((await call('untested', gh.lastRun)).value).toEqual(run(13, 'Tests (plain)', { conclusion: 'failure', headSha: '1313131313131313' }));
 });
 
 test('It returns no last run when tests.yml has never run', async () => {
@@ -64,6 +68,10 @@ test('It returns the newest measured run among the last 100', async () => {
   const { value, requests } = await call('runs', gh.lastMeasuredRun);
   expect(value).toEqual(run(12, 'Tests (measured)', { headSha: '1212121212121212' }));
   expect(requests.map(request => request.url)).toEqual([`${workflow}/runs?branch=main&per_page=100`]);
+});
+
+test('It skips measured runs that ended without passing or failing', async () => {
+  expect((await call('untested', gh.lastMeasuredRun)).value).toEqual(run(12, 'Tests (measured)', { headSha: '1212121212121212' }));
 });
 
 test('It returns no measured run when only plain runs exist', async () => {
@@ -129,6 +137,11 @@ test('It confirms a fix with a plain run when the newest red run was plain', asy
   const { value, requests } = await call('red-plain', gh.confirmFix);
   expect(value).toBe('plain');
   expect(requests.at(-1)).toMatchObject({ method: 'POST', url: `${workflow}/dispatches`, body: { ref: 'main', inputs: { kind: 'plain' } } });
+});
+
+test('It confirms a fix against the newest failed run, past runs that never finished testing', async () => {
+  const { value } = await call('untested', gh.confirmFix);
+  expect(value).toBe('plain');
 });
 
 test('It refuses to confirm a fix when no run is red', async () => {

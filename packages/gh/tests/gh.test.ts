@@ -53,7 +53,12 @@ const runsUrl = (perPage: number) =>
 test("lastRun returns the newest run on main", async () => {
   const { github, requests } = fake({ workflow_runs: [apiRun("Tests (plain)")] });
   expect(await gh.lastRun(github, repo)).toEqual(run("Tests (plain)"));
-  expect(requests).toEqual([{ method: "GET", url: runsUrl(1) }]);
+  expect(requests).toEqual([{ method: "GET", url: runsUrl(100) }]);
+});
+
+test.for(["timed_out", "cancelled", "startup_failure", "skipped"])("lastRun skips a %s run", async conclusion => {
+  const { github } = fake({ workflow_runs: [apiRun("Tests (plain)", 2, conclusion), apiRun("Tests (plain)", 1, "failure")] });
+  expect(await gh.lastRun(github, repo)).toEqual(run("Tests (plain)", 1, "failure"));
 });
 
 test("lastRun returns null when there are no runs", async () => {
@@ -72,6 +77,11 @@ test("lastMeasuredRun skips plain runs", async () => {
   });
   expect(await gh.lastMeasuredRun(github, repo)).toEqual(run("Tests (measured)", 2));
   expect(requests).toEqual([{ method: "GET", url: runsUrl(100) }]);
+});
+
+test("lastMeasuredRun skips a cancelled measured run", async () => {
+  const { github } = fake({ workflow_runs: [apiRun("Tests (measured)", 2, "cancelled"), apiRun("Tests (measured)", 1)] });
+  expect(await gh.lastMeasuredRun(github, repo)).toEqual(run("Tests (measured)", 1));
 });
 
 test("lastMeasuredRun returns null when no measured run is in the list", async () => {
@@ -148,13 +158,13 @@ test.for([
   expect(requests).toEqual([{ method: "GET", url: runsUrl(100) }, dispatch(kind)]);
 });
 
-test.for(["timed_out", "cancelled", "startup_failure", "skipped"])("confirmFix treats a %s run as red", async conclusion => {
+test.for(["timed_out", "cancelled", "startup_failure", "skipped"])("confirmFix skips a %s run", async conclusion => {
   const { github, requests } = fakeSequence([
-    [{ workflow_runs: [apiRun("Tests (plain)", 2), apiRun("Tests (measured)", 1, conclusion)] }, 200],
+    [{ workflow_runs: [apiRun("Tests (measured)", 2, conclusion), apiRun("Tests (plain)", 1, "failure")] }, 200],
     [null, 204],
   ]);
-  expect(await gh.confirmFix(github, repo)).toBe("measured");
-  expect(requests[1]).toEqual(dispatch("measured"));
+  expect(await gh.confirmFix(github, repo)).toBe("plain");
+  expect(requests[1]).toEqual(dispatch("plain"));
 });
 
 test("confirmFix skips a run still in progress", async () => {

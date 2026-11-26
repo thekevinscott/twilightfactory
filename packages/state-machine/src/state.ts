@@ -8,7 +8,7 @@ export interface Run {
 
 // Each input is fetched only when the state depends on it.
 export interface Inputs<Args extends unknown[] = []> {
-  // The latest run of either kind, plain or measured.
+  // The latest run of either kind, plain or measured, skipping runs that ended neither in success nor failure.
   lastRun: (...args: Args) => Promise<Run | null>;
   lastMeasuredRun: (...args: Args) => Promise<Run | null>;
   // The head commit of the default branch.
@@ -34,8 +34,8 @@ export const state = async <Args extends unknown[]>(
   if (lastRun.status !== "completed") {
     return "STOP";
   }
-  // GitHub reports a job timeout as cancelled, so anything short of success is red.
-  if (lastRun.conclusion !== "success") {
+  // Only failing tests are red. A job timeout reports as cancelled, so it is not red either.
+  if (lastRun.conclusion === "failure") {
     return (await inputs.openRedIssue(...args)) ? "STOP" : "FILE_ISSUE";
   }
   if (now.getTime() - new Date(lastRun.createdAt).getTime() < HOUR) {
@@ -43,7 +43,7 @@ export const state = async <Args extends unknown[]>(
   }
   const lastMeasuredRun = await inputs.lastMeasuredRun(...args);
   // A fix confirmed by a plain run says nothing about the speed or memory failure it followed.
-  if (lastMeasuredRun !== null && lastMeasuredRun.conclusion !== "success") {
+  if (lastMeasuredRun !== null && lastMeasuredRun.conclusion === "failure") {
     return "GO_MEASURED";
   }
   if (lastRun.headSha === (await inputs.head(...args))) {

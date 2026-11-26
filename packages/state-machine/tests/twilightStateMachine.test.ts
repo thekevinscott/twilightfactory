@@ -80,17 +80,6 @@ const cases: Case[] = [
     outputs: { state: "FILE_ISSUE", fetched: ["lastRun", "openRedIssue"] },
   },
 
-  {
-    name: "timed out, no red issue",
-    inputs: { lastRun: run("completed", "timed_out", 2 * HOURS, "aaa"), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "FILE_ISSUE", fetched: ["lastRun", "openRedIssue"] },
-  },
-  {
-    name: "timed out, red issue open",
-    inputs: { lastRun: run("completed", "timed_out", 2 * HOURS, "aaa"), lastMeasuredRun: measured25h, head: "bbb", openRedIssue: true },
-    outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
-  },
-
   // Green again
   {
     name: "passed, red issue still open",
@@ -163,30 +152,6 @@ const cases: Case[] = [
     inputs: { lastRun: passed2h, lastMeasuredRun: failed(3 * HOURS), head: "bbb" },
     outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun"] },
   },
-  {
-    name: "fixed two hours ago by a plain run, measured run timed out",
-    inputs: { lastRun: passed2h, lastMeasuredRun: run("completed", "timed_out", 3 * HOURS, "aaa"), head: "aaa" },
-    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun"] },
-  },
-  {
-    name: "passed two hours ago, measured run cancelled",
-    inputs: { lastRun: passed2h, lastMeasuredRun: run("completed", "cancelled", 3 * HOURS, "aaa"), head: "aaa" },
-    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun"] },
-  },
-
-  // Anything but success is red: a job timeout reports as cancelled
-  ...["cancelled", "startup_failure", "skipped"].flatMap((conclusion): Case[] => [
-    {
-      name: `${conclusion} two hours ago, no red issue`,
-      inputs: { lastRun: run("completed", conclusion, 2 * HOURS, "aaa"), lastMeasuredRun: measured2h, head: "bbb" },
-      outputs: { state: "FILE_ISSUE", fetched: ["lastRun", "openRedIssue"] },
-    },
-    {
-      name: `${conclusion} 30 minutes ago, red issue open`,
-      inputs: { lastRun: run("completed", conclusion, 30, "aaa"), lastMeasuredRun: measured2h, head: "bbb", openRedIssue: true },
-      outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
-    },
-  ]),
 ];
 
 test.for(cases)("$name is $outputs.state", async ({ inputs, outputs }) => {

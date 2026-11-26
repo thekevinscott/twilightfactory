@@ -43,14 +43,17 @@ const runs = async (github: Octokit, repo: string, perPage: number): Promise<Run
   }));
 };
 
+// Cancelled, timed out, skipped and similar runs never finished testing, so tf acts as if they never happened.
+const tested = (run: Run) => run.status !== "completed" || run.conclusion === "success" || run.conclusion === "failure";
+
 export const recentRuns = (github: Octokit, repo: string, count = 10): Promise<Run[]> => runs(github, repo, count);
 
 export const lastRun = async (github: Octokit, repo: string): Promise<Run | null> =>
-  (await runs(github, repo, 1))[0] ?? null;
+  (await runs(github, repo, 100)).find(tested) ?? null;
 
 // A day holds at most 24 plain runs, so the last measured run is within the newest 100.
 export const lastMeasuredRun = async (github: Octokit, repo: string): Promise<Run | null> =>
-  (await runs(github, repo, 100)).find(run => run.displayTitle.includes("(measured)")) ?? null;
+  (await runs(github, repo, 100)).find(run => tested(run) && run.displayTitle.includes("(measured)")) ?? null;
 
 export const head = async (github: Octokit, repo: string): Promise<string> =>
   (await github.rest.repos.getCommit({ ...split(repo), ref: "HEAD" })).data.sha;
@@ -73,7 +76,7 @@ export const fileIssue = async (github: Octokit, repo: string, run: Run): Promis
   });
 };
 
-const isRed = (run: Run) => run.status === "completed" && run.conclusion !== "success";
+const isRed = (run: Run) => run.status === "completed" && run.conclusion === "failure";
 
 // The fixer confirms with the kind of run that went red, so a speed or memory failure is re-measured.
 export const confirmFix = async (github: Octokit, repo: string): Promise<Kind> => {
