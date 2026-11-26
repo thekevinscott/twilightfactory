@@ -8,13 +8,9 @@ const shows = (terminal, fixture: string, status: RegExp, env: Record<string, st
 
 test('It has never run', ({ terminal }) => shows(terminal, 'state/tests-due', /🔵\s+tests due/));
 
-test('It shows a white dot when the repo has no tests workflow', ({ terminal }) => shows(terminal, 'state/not-set-up', /⚪\s+not set up/));
-
-test('It shows a green dot while a run is in progress', ({ terminal }) => shows(terminal, 'state/quiet', /🟢\s+all quiet/));
+test('It shows a white dot while a run is in progress', ({ terminal }) => shows(terminal, 'state/waiting', /⚪\s+waiting/));
 
 test('It shows a red dot when the last run failed', ({ terminal }) => shows(terminal, 'state/red', /🔴\s+red/));
-
-test('It shows a red dot while a red issue is open', ({ terminal }) => shows(terminal, 'state/fixing', /🔴\s+fixing/));
 
 test('It shows a yellow dot when a pull request is blocked', ({ terminal }) => shows(terminal, 'state/prs-blocked', /🟡\s+PRs blocked/));
 
