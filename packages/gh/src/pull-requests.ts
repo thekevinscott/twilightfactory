@@ -155,3 +155,31 @@ export const enableAutoMerge = async (
     throw error;
   }
 };
+
+export interface ConflictedPullRequest extends PullRequest {
+  headSha: string;
+}
+
+interface Detail extends Item {
+  head: { ref: string; sha: string };
+  mergeable_state: string;
+}
+
+// The list endpoint omits mergeability, so each open pull request is fetched; ETags make unchanged ones free.
+// Keyed by head, so a pull request fires once per push and an agent working on it is not started again.
+// No webhook: GitHub sends no event when a pull request becomes conflicted.
+export const pullRequestConflicted = () =>
+  defineSource({
+    type: "pull_request.conflicted",
+    poll: async ({ get }) => {
+      const open = await get<Item[]>("GET /repos/{owner}/{repo}/pulls", { state: "open", per_page: PER_PAGE });
+      const changes = [];
+      for (const { number, draft } of open) {
+        if (draft) continue;
+        const item = await get<Detail>("GET /repos/{owner}/{repo}/pulls/{pull_number}", { pull_number: number });
+        if (item.mergeable_state !== "dirty") continue;
+        changes.push({ key: `${number}:${item.head.sha}`, data: { ...pullRequest(item), headSha: item.head.sha } });
+      }
+      return changes;
+    },
+  });

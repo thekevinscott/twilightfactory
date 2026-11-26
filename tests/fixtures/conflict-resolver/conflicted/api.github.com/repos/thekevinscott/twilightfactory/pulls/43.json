@@ -1,0 +1,15 @@
+{
+    "number": 43,
+    "node_id": "PR_node43",
+    "title": "Draft that conflicts",
+    "body": null,
+    "html_url": "https://github.com/thekevinscott/twilightfactory/pull/43",
+    "draft": true,
+    "user": { "login": "thekevinbot" },
+    "head": { "ref": "branch-43", "sha": "sha43" },
+    "base": { "ref": "main" },
+    "created_at": "2020-01-01T00:00:00Z",
+    "updated_at": "2020-01-01T00:00:00Z",
+    "closed_at": null,
+    "merged_at": null, "mergeable": false, "mergeable_state": "dirty"
+}
