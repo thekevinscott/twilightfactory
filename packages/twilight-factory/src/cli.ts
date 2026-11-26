@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import {
@@ -23,6 +24,13 @@ const { version, description } = require("../package.json") as {
 const OVERRIDES = { defaultProvider: "claude-bridge", defaultModel: "claude-opus-5-5", quietStartup: true } as const;
 
 const program = new Command("tf").description(description).version(version);
+
+program
+  .command("context")
+  .description("print what twilight factory is, how it works and the rules agents follow")
+  .action(() => {
+    process.stdout.write(readFileSync(new URL("../docs/context.md", import.meta.url), "utf8"));
+  });
 
 program.action(async () => {
   const claudeExecutable = stageClaudeExecutable();
