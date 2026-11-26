@@ -12,13 +12,13 @@ const labels: Record<string, [dot: string, text: string]> = {
 
 export const label = (state: string): string => {
   const known = labels[state];
-  if (known) return `${known[0]} ${known[1]}`;
+  if (known) { return `${known[0]} ${known[1]}`; }
   return `🔴 ${state.replace(/ - https?:\/\/\S+$/, "")}`;
 };
 
 const truncateLeft = (text: string, max: number): string => {
-  if (text.length <= max) return text;
-  if (max <= 3) return "";
+  if (text.length <= max) { return text; }
+  if (max <= 3) { return ""; }
   return `...${text.slice(text.length - (max - 3))}`;
 };
 
@@ -32,7 +32,9 @@ export const stateDisplay = (_pi: ExtensionAPI) => {
       ctx.ui.setFooter((ui, theme) => {
         tui = ui;
         return {
-          invalidate() {},
+          invalidate() {
+            // Rendering reads live state; nothing is cached.
+          },
           render(width: number): string[] {
             const status = `${label(state)}    `;
             const model = ctx.model?.id ?? "";

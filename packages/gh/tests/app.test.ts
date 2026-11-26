@@ -88,6 +88,6 @@ test.for([
 ] as const)("readAppConfig rejects a config with %s", async ([, config, key, message]) => {
   const dir = configDir();
   writeFileSync(path.join(dir, "github-app.json"), config);
-  if (key !== undefined) writeFileSync(path.join(dir, "github-app.pem"), key);
+  if (key !== undefined) { writeFileSync(path.join(dir, "github-app.pem"), key); }
   await expect(gh.readAppConfig(path.join(dir, "github-app.json"))).rejects.toThrow(message);
 });

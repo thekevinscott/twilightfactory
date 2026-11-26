@@ -14,11 +14,11 @@ const POLL_MS = Number(process.env.TF_POLL_MS) || 60 * 1000;
 
 const githubRepo = async (cwd: string): Promise<string> => {
   const { stdout } = await promisify(execFile)("git", ["remote", "get-url", "origin"], { cwd });
-  const match = /github\.com[:/](.+?)(?:\.git)?$/.exec(stdout.trim());
-  if (!match?.[1]) {
+  const match = /github\.com[:/](?<name>.+?)(?:\.git)?$/.exec(stdout.trim());
+  if (!match?.groups?.name) {
     throw new Error(`origin is not a GitHub repository: ${stdout.trim()}`);
   }
-  return match[1];
+  return match.groups.name;
 };
 
 // GitHub can take a few seconds to list a dispatched run, so remember which head we already started.
@@ -36,7 +36,7 @@ const currentState = async (
   try {
     token = await githubToken(onVerification);
   } catch (error) {
-    if (error instanceof NoClientIdError) return error.message;
+    if (error instanceof NoClientIdError) { return error.message; }
     throw error;
   }
   const github = gh.client(token);
@@ -46,9 +46,15 @@ const currentState = async (
   let headSha: string | undefined;
   const seen: { lastRun?: gh.Run | null } = {};
   const inputs: Inputs = {
-    lastRun: async () => (seen.lastRun = await gh.lastRun(github, repo)),
+    lastRun: async () => {
+      seen.lastRun = await gh.lastRun(github, repo);
+      return seen.lastRun;
+    },
     lastMeasuredRun: () => gh.lastMeasuredRun(github, repo),
-    head: async () => (headSha = await gh.head(github, repo)),
+    head: async () => {
+      headSha = await gh.head(github, repo);
+      return headSha;
+    },
     openRedIssue: () => gh.openRedIssue(github, repo),
   };
   const state = await twilightStateMachine(inputs);
@@ -94,20 +100,20 @@ const pullRequestEvents = async (
   });
   events.on<gh.PullRequest>("pull_request.opened", ({ data }) => gh.enableAutoMerge(github, data));
   events.on<gh.ClosedPullRequest>("pull_request.closed", async ({ data }) => {
-    if (!data.merged) return;
+    if (!data.merged) { return; }
     const result = await removeMergedWorktree(cwd, data.head);
-    if (result) onInfo(`tf: #${data.number} merged: ${result}`);
+    if (result) { onInfo(`tf: #${data.number} merged: ${result}`); }
   });
   return events;
 };
 
-export default function (pi: ExtensionAPI) {
+export default function tfExtension(pi: ExtensionAPI) {
   let timer: NodeJS.Timeout | undefined;
   let events: gh.EventSource | undefined;
-  let redFixer: { dispose(): void } | undefined;
+  let redFixer: { dispose: () => void } | undefined;
   const display = stateDisplay(pi);
   let state: string | undefined;
-  chatContext(pi, { repo: githubRepo, github: async () => gh.client(await githubToken(() => {})), state: () => state });
+  chatContext(pi, { repo: githubRepo, github: async () => gh.client(await githubToken(() => undefined)), state: () => state });
 
   const signIn = (ctx: ExtensionContext) => ({ userCode, verificationUri }: Verification) => {
     ctx.ui.setWidget("tf-sign-in", [`Sign in to GitHub: enter ${userCode} at ${verificationUri}`]);
@@ -137,13 +143,13 @@ export default function (pi: ExtensionAPI) {
     const onError = (error: unknown) => ctx.ui.notify(`tf: ${message(error)}`, "warning");
     pullRequestEvents(ctx.cwd, signIn(ctx), onError, text => ctx.ui.notify(text, "info"))
       .then(source => {
-        if (timer === undefined) return;
+        if (timer === undefined) { return; }
         events = source;
         return source.start();
       })
       .catch(error => {
         // The state display already reports a missing client id.
-        if (!(error instanceof NoClientIdError)) onError(error);
+        if (!(error instanceof NoClientIdError)) { onError(error); }
       });
   });
 

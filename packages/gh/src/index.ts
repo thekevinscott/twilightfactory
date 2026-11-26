@@ -1,4 +1,4 @@
-import { Octokit } from "@octokit/rest";
+import type { Octokit } from "@octokit/rest";
 
 // Conventions tf sets up in every repo.
 export const WORKFLOW = "tests.yml";
@@ -15,9 +15,6 @@ export interface Run {
   displayTitle: string;
   url: string;
 }
-
-export const client = (token: string, options: ConstructorParameters<typeof Octokit>[0] = {}): Octokit =>
-  new Octokit({ auth: token, ...options });
 
 const split = (repo: string) => {
   const [owner = "", name = ""] = repo.split("/");
@@ -85,6 +82,7 @@ export const confirmFix = async (github: Octokit, repo: string): Promise<Kind> =
   await startRun(github, repo, kind);
   return kind;
 };
+export * from "./client.js";
 export * from "./events.js";
 export * from "./pull-requests.js";
 export * from "./summaries.js";

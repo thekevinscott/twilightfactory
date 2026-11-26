@@ -44,12 +44,12 @@ const fixtureBase = (dir: string, url: string) => {
 /** `<path>.json` answers 200; `<path>.<status>.json` answers that status. */
 export const findFixture = (dir: string, url: string): { status: number; body: Buffer } | undefined => {
   const base = fixtureBase(dir, url);
-  if (existsSync(`${base}.json`)) return { status: 200, body: readFileSync(`${base}.json`) };
+  if (existsSync(`${base}.json`)) { return { status: 200, body: readFileSync(`${base}.json`) }; }
   const parent = path.dirname(base);
   const name = path.basename(base);
-  if (!existsSync(parent)) return undefined;
+  if (!existsSync(parent)) { return undefined; }
   const file = readdirSync(parent).find((entry) => entry.startsWith(`${name}.`) && /^\d{3}\.json$/.test(entry.slice(name.length + 1)));
-  if (!file) return undefined;
+  if (!file) { return undefined; }
   return { status: Number(file.slice(name.length + 1, -5)), body: readFileSync(path.join(parent, file)) };
 };
 
@@ -71,7 +71,7 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
   };
   const record = async (req: CompletedRequest) => {
     const session = sessionOf(req);
-    if (!session) return undefined;
+    if (!session) { return; }
     const { authorization } = req.headers;
     const request: Request = {
       method: req.method,
@@ -80,7 +80,7 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
       body: (await req.body.getText()) ?? "",
     };
     session.requests.push(request);
-    for (const [match, resolve] of session.waiting) if (match(request)) resolve(request);
+    for (const [match, resolve] of session.waiting) { if (match(request)) { resolve(request); } }
     return session;
   };
 
@@ -88,15 +88,15 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
     await server.forAnyRequest().thenCallback(async (req) => {
       const session = await record(req);
       const found = session?.fixture ? findFixture(session.fixture, req.url) : undefined;
-      if (!found) return { statusCode: 502, body: `no fixture for ${req.url}` };
+      if (!found) { return { statusCode: 502, body: `no fixture for ${req.url}` }; }
       return { statusCode: found.status, body: found.body, headers: { "content-type": "application/json" } };
     });
   } else {
     await server.forAnyRequest().thenPassThrough({
       beforeRequest: async (req) => { await record(req); },
       beforeResponse: async (res, req) => {
-        if (mode !== "record" || !recordings || res.statusCode !== 200) return;
-        if (!res.headers["content-type"]?.includes("json")) return;
+        if (mode !== "record" || !recordings || res.statusCode !== 200) { return; }
+        if (!res.headers["content-type"]?.includes("json")) { return; }
         const target = `${fixtureBase(recordings, req.url)}.json`;
         mkdirSync(path.dirname(target), { recursive: true });
         writeFileSync(target, `${JSON.stringify(await res.body.getJson(), null, 2)}\n`);
@@ -115,7 +115,10 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
     const proxyUrl = `http://metadata:${metadata}@127.0.0.1:${server.port}`;
     let agent: ProxyAgent | undefined;
     const dispatcher = () => {
-      if (!agent) agents.push((agent = new ProxyAgent({ uri: proxyUrl, requestTls: { ca: ca.cert } })));
+      if (!agent) {
+        agent = new ProxyAgent({ uri: proxyUrl, requestTls: { ca: ca.cert } });
+        agents.push(agent);
+      }
       return agent;
     };
     const state: State = {
@@ -134,8 +137,7 @@ export const startProxy = async ({ mode = "replay", recordings }: { mode?: Mode;
       waiting: [],
       next: (match) => new Promise((resolve) => {
         const found = state.requests.find(match);
-        if (found) resolve(found);
-        else state.waiting.push([match, resolve]);
+        if (found) { resolve(found); } else { state.waiting.push([match, resolve]); }
       }),
     };
     sessions.set(id, state);

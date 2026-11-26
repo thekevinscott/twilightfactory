@@ -7,18 +7,30 @@ const repo = 'thekevinscott/twilightfactory';
 const poll = async (polls: number) => {
   const session = proxySession('gh/pulls');
   let count = 0;
-  let done = () => {};
-  const finished = new Promise<void>(resolve => (done = resolve));
-  const counter = gh.defineSource({ type: 'count', poll: async () => (++count >= polls && done(), []) });
+  let done: () => void = () => undefined;
+  const finished = new Promise<void>(resolve => {
+    done = resolve;
+  });
+  const counter = gh.defineSource({
+    type: 'count',
+    poll: async () => {
+      count += 1;
+      if (count >= polls) {
+        done();
+      }
+      return [];
+    },
+  });
   const events = gh.eventSource({
     github: gh.client('gho_gh', { request: { fetch: session.fetch } }),
     repo,
     interval: 10,
     sources: [gh.pullRequestOpened(), gh.pullRequestEdited(), gh.pullRequestClosed(), counter],
+    // biome-ignore lint/suspicious/noConsole: surfaces poll errors in the test log
     onError: error => console.error(error),
   });
   const seen: gh.GitHubEvent[] = [];
-  for (const type of ['pull_request.opened', 'pull_request.edited', 'pull_request.closed']) events.on(type, event => void seen.push(event));
+  for (const type of ['pull_request.opened', 'pull_request.edited', 'pull_request.closed']) { events.on(type, event => void seen.push(event)); }
   await events.start();
   await finished;
   await events.stop();

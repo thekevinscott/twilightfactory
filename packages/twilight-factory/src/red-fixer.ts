@@ -22,12 +22,12 @@ You get three attempts. An attempt ends when the GitHub run on your branch finis
 const task = (run: { id: number; url: string; headSha: string }) =>
   `Main is red. Failed tests.yml run ${run.id} at ${run.headSha}: ${run.url}`;
 
-export const registerRedFixer = (pi: ExtensionAPI): { dispose(): void } => {
+export const registerRedFixer = (pi: ExtensionAPI): { dispose: () => void } => {
   const request: {
     version: 1;
     name: string;
     definition: { description: string; systemPrompt: string; extensions: string[] };
-    result?: { ok: true; registration: { dispose(): void } } | { ok: false; error: Error };
+    result?: { ok: true; registration: { dispose: () => void } } | { ok: false; error: Error };
   } = {
     version: 1,
     name: RED_FIXER,
@@ -39,8 +39,8 @@ export const registerRedFixer = (pi: ExtensionAPI): { dispose(): void } => {
     },
   };
   pi.events.emit("pi-subagents:runtime-agent-register:v1", request);
-  if (!request.result) throw new Error("pi-subagents did not register the red-fixer agent");
-  if (!request.result.ok) throw request.result.error;
+  if (!request.result) { throw new Error("pi-subagents did not register the red-fixer agent"); }
+  if (!request.result.ok) { throw request.result.error; }
   return request.result.registration;
 };
 
@@ -50,8 +50,7 @@ export const startRedFixer = (pi: ExtensionAPI, cwd: string, run: { id: number; 
     const off = pi.events.on(`subagents:rpc:v1:reply:${requestId}`, (reply) => {
       off();
       const { success, error } = reply as { success: boolean; error?: { message: string } };
-      if (success) resolve();
-      else reject(new Error(`red-fixer: ${error?.message ?? "spawn failed"}`));
+      if (success) { resolve(); } else { reject(new Error(`red-fixer: ${error?.message ?? "spawn failed"}`)); }
     });
     pi.events.emit("subagents:rpc:v1:request", {
       version: 1,

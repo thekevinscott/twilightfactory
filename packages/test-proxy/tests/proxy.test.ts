@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { findFixture, launch, startProxy, type Proxy } from "../src/index.js";
+import { findFixture, launch, startProxy, type Proxy as TestProxy } from "../src/index.js";
 
 const fixtureFolder = (files: Record<string, string>) => {
   const dir = mkdtempSync(path.join(tmpdir(), "test-proxy-fixture-"));
@@ -60,7 +60,7 @@ describe("findFixture", () => {
 });
 
 describe("startProxy", () => {
-  let proxy: Proxy;
+  let proxy: TestProxy;
   const dir = fixtureFolder({
     "api.github.com/repos/a/b.json": '{"name":"b"}',
     "api.github.com/repos/a/missing.404.json": '{"message":"Not Found"}',
@@ -141,7 +141,9 @@ describe("startProxy", () => {
   test("launch runs the command with the session's proxy env", async () => {
     const session = proxy.session(dir);
     const calls: [string, { env: Record<string, string>; cols?: number }][] = [];
-    launch((command: string, options: { env: Record<string, string>; cols?: number }) => calls.push([command, options]), ["node", "cli.js"], session, { env: { GH_TOKEN: "x" }, cols: 80 });
+    launch((command: string, options: { env: Record<string, string>; cols?: number }) => {
+      calls.push([command, options]);
+    }, ["node", "cli.js"], session, { env: { GH_TOKEN: "x" }, cols: 80 });
     expect(calls).toEqual([["node cli.js", { cols: 80, env: { ...session.env, GH_TOKEN: "x" } }]]);
     expect(session.env.HTTPS_PROXY).toMatch(/^http:\/\/metadata:.+@127\.0\.0\.1:\d+$/);
     expect(readFileSync(session.env.NODE_EXTRA_CA_CERTS!, "utf8")).toContain("BEGIN CERTIFICATE");
@@ -154,7 +156,9 @@ describe("record mode", () => {
       res.setHeader("content-type", "application/json");
       res.end(JSON.stringify({ path: req.url }));
     });
-    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+    await new Promise<void>((resolve) => {
+      upstream.listen(0, "127.0.0.1", resolve);
+    });
     const recordings = mkdtempSync(path.join(tmpdir(), "test-proxy-recordings-"));
     const proxy = await startProxy({ mode: "record", recordings });
     try {
