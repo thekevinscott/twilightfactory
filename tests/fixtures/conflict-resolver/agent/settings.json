@@ -1,0 +1,7 @@
+{
+  "subagents": {
+    "agentOverrides": {
+      "conflict-resolver": { "model": "fake/fake" }
+    }
+  }
+}

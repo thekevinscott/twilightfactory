@@ -5,6 +5,7 @@ import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { chatContext } from "./chat-context.js";
 import { stateDisplay } from "./footer.js";
+import { registerConflictResolver, startConflictResolver } from "./conflict-resolver.js";
 import { registerRedFixer, startRedFixer } from "./red-fixer.js";
 import { appConfigFile, githubToken, NoClientIdError, type Verification } from "./token.js";
 import { removeMergedWorktree } from "./worktrees.js";
@@ -82,12 +83,13 @@ const pullRequestEvents = async (
   onVerification: (verification: Verification) => void,
   onError: (error: unknown) => void,
   onInfo: (text: string) => void,
+  onConflict: (pr: gh.ConflictedPullRequest) => Promise<void>,
 ) => {
   const github = gh.client(await githubToken(onVerification));
   const events = gh.eventSource({
     github,
     repo: await githubRepo(cwd),
-    sources: [gh.pullRequestOpened(), gh.pullRequestClosed()],
+    sources: [gh.pullRequestOpened(), gh.pullRequestClosed(), gh.pullRequestConflicted()],
     interval: POLL_MS,
     onError: (error, event) =>
       onError(event ? new Error(`${event.type} #${(event.data as gh.PullRequest).number}: ${message(error)}`) : error),
@@ -98,13 +100,14 @@ const pullRequestEvents = async (
     const result = await removeMergedWorktree(cwd, data.head);
     if (result) onInfo(`tf: #${data.number} merged: ${result}`);
   });
+  events.on<gh.ConflictedPullRequest>("pull_request.conflicted", ({ data }) => onConflict(data));
   return events;
 };
 
 export default function (pi: ExtensionAPI) {
   let timer: NodeJS.Timeout | undefined;
   let events: gh.EventSource | undefined;
-  let redFixer: { dispose(): void } | undefined;
+  let agents: { dispose(): void }[] = [];
   const display = stateDisplay(pi);
   let state: string | undefined;
   chatContext(pi, { repo: githubRepo, github: async () => gh.client(await githubToken(() => {})), state: () => state });
@@ -131,11 +134,16 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     display.attach(ctx);
-    redFixer = registerRedFixer(pi);
+    agents = [registerRedFixer(pi), registerConflictResolver(pi)];
     void show(ctx);
     timer = setInterval(() => void show(ctx), REFRESH_MS);
     const onError = (error: unknown) => ctx.ui.notify(`tf: ${message(error)}`, "warning");
-    pullRequestEvents(ctx.cwd, signIn(ctx), onError, text => ctx.ui.notify(text, "info"))
+    const onInfo = (text: string) => ctx.ui.notify(text, "info");
+    const onConflict = async (pr: gh.ConflictedPullRequest) => {
+      await startConflictResolver(pi, ctx.cwd, pr);
+      onInfo(`tf: #${pr.number} has conflicts: started the conflict resolver`);
+    };
+    pullRequestEvents(ctx.cwd, signIn(ctx), onError, onInfo, onConflict)
       .then(source => {
         if (timer === undefined) return;
         events = source;
@@ -150,8 +158,8 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_shutdown", async () => {
     clearInterval(timer);
     timer = undefined;
-    redFixer?.dispose();
-    redFixer = undefined;
+    for (const agent of agents) agent.dispose();
+    agents = [];
     await events?.stop();
     events = undefined;
   });
