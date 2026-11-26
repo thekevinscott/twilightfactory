@@ -1,34 +1,30 @@
 name: Main is green
 
 # Blocks pull requests while main is red. tf re-runs failed checks once main passes.
+# A pull request labeled run-ci is judged by its own tests.yml run instead; Recheck run-ci
+# pull requests re-runs this check when that run finishes.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
-  actions: read
+  actions: write
   contents: read
+  pull-requests: read
 
 jobs:
   main-is-green:
     name: Main is green
     runs-on: ubuntu-latest
     steps:
-      - name: Check the last tests run on main
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - name: Check main, or this head's own run if labeled run-ci
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          TESTS_WORKFLOW: tests.yml
-        run: |
-          set -euo pipefail
-          if ! gh api "repos/$REPO/actions/workflows/$TESTS_WORKFLOW" --silent 2>/dev/null; then
-            echo "No $TESTS_WORKFLOW in $REPO."
-            exit 0
-          fi
-          run=$(gh run list --repo "$REPO" --workflow "$TESTS_WORKFLOW" --branch main --status completed --limit 1 --json conclusion,url --jq '.[0] // {} | "\(.conclusion // "") \(.url // "")"')
-          read -r conclusion url <<< "$run"
-          if [ -z "$conclusion" ] || [ "$conclusion" = success ]; then
-            echo "main is green"
-          else
-            echo "main is red ($conclusion): $url"
-            exit 1
-          fi
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: node .github/scripts/main-is-green.mjs
