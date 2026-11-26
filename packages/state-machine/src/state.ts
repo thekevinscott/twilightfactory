@@ -8,8 +8,6 @@ export interface Run {
 
 // Each input is fetched only when the state depends on it.
 export interface Inputs<Args extends unknown[] = []> {
-  // Whether the repo has the tests workflow tf runs.
-  hasWorkflow: (...args: Args) => Promise<boolean>;
   // The latest run of either kind, plain or measured.
   lastRun: (...args: Args) => Promise<Run | null>;
   lastMeasuredRun: (...args: Args) => Promise<Run | null>;
@@ -21,7 +19,7 @@ export interface Inputs<Args extends unknown[] = []> {
   blockedPullRequests: (...args: Args) => Promise<number>;
 }
 
-export type State = "NOT_SET_UP" | "STOP" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
+export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -31,9 +29,6 @@ export const state = async <Args extends unknown[]>(
   args: Args,
   now: Date = new Date(),
 ): Promise<State> => {
-  if (!(await inputs.hasWorkflow(...args))) {
-    return "NOT_SET_UP";
-  }
   const lastRun = await inputs.lastRun(...args);
   if (lastRun === null) {
     return "GO_MEASURED";

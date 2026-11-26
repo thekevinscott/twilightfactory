@@ -12,7 +12,6 @@ const state = await twilightStateMachine(inputs); // STOP | GO_PLAIN | GO_MEASUR
 
 | Last run | State |
 |---|---|
-| no tests workflow in the repo | `NOT_SET_UP` |
 | none | `GO_MEASURED` |
 | in progress or queued | `STOP` |
 | completed without success (failed, cancelled, timed out, anything else), no red issue open | `FILE_ISSUE` |
