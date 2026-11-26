@@ -15,11 +15,9 @@ export interface Inputs<Args extends unknown[] = []> {
   head: (...args: Args) => Promise<string>;
   // Whether an issue for the red main branch is open.
   openRedIssue: (...args: Args) => Promise<boolean>;
-  // Open pull requests whose main-is-green check failed.
-  blockedPullRequests: (...args: Args) => Promise<number>;
 }
 
-export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "RECHECK_PRS" | "FILE_ISSUE";
+export type State = "STOP" | "GO_PLAIN" | "GO_MEASURED" | "FILE_ISSUE";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -39,9 +37,6 @@ export const state = async <Args extends unknown[]>(
   // GitHub reports a job timeout as cancelled, so anything short of success is red.
   if (lastRun.conclusion !== "success") {
     return (await inputs.openRedIssue(...args)) ? "STOP" : "FILE_ISSUE";
-  }
-  if ((await inputs.blockedPullRequests(...args)) > 0) {
-    return "RECHECK_PRS";
   }
   if (now.getTime() - new Date(lastRun.createdAt).getTime() < HOUR) {
     return "STOP";

@@ -94,37 +94,6 @@ test('It reports no red issue when none is open', async () => {
   expect((await call('no-red-issue', gh.openRedIssue)).value).toBe(false);
 });
 
-test('It asks GraphQL for the open pull requests of the repo', async () => {
-  const { requests } = await call('blocked', gh.blockedPullRequests);
-  expect(requests).toHaveLength(1);
-  expect(requests[0]).toMatchObject({ method: 'POST', url: 'https://api.github.com/graphql' });
-  expect(requests[0].body.variables).toEqual({ owner: 'thekevinscott', repo: 'twilightfactory' });
-  expect(requests[0].body.query).toContain('pullRequests(states: OPEN');
-});
-
-test('It reports a pull request whose Main is green check failed, with the run id', async () => {
-  const { value } = await call('blocked', gh.blockedPullRequests);
-  expect(value).toContainEqual({ number: 1, runId: 101 });
-  expect(value).toContainEqual({ number: 6, runId: 601 });
-});
-
-test('It ignores pull requests that Main is green does not block', async () => {
-  const { value } = await call('blocked', gh.blockedPullRequests);
-  expect(value.map(pr => pr.number)).not.toContain(2);
-  expect(value.map(pr => pr.number)).not.toContain(3);
-});
-
-test('It ignores pull requests labeled run-ci, which their own run rechecks', async () => {
-  const { value, requests } = await call('blocked', gh.blockedPullRequests);
-  expect(requests[0].body.query).toContain('labels(');
-  expect(value.map(pr => pr.number)).not.toContain(7);
-});
-
-test('It ignores pull requests with no checks or no commits', async () => {
-  const { value } = await call('blocked', gh.blockedPullRequests);
-  expect(value).toEqual([{ number: 1, runId: 101 }, { number: 6, runId: 601 }]);
-});
-
 test('It dispatches tests.yml on main with the kind', async () => {
   const { value, error, requests } = await call('dispatch', gh.startRun, ['measured']);
   expect(error).toBeUndefined();
@@ -145,12 +114,6 @@ test('It files a red issue for a failed run', async () => {
       body: { labels: ['red'], title: 'main is red at abcdef0', body: `Tests (plain) failed: https://github.com/${repo}/actions/runs/42` },
     },
   ]);
-});
-
-test('It reruns the failed jobs of a check', async () => {
-  const { error, requests } = await call('rerun', gh.rerunCheck, [4242]);
-  expect(error).toBeUndefined();
-  expect(requests.map(({ method, url }) => ({ method, url }))).toEqual([{ method: 'POST', url: `${api}/actions/runs/4242/rerun-failed-jobs` }]);
 });
 
 test('It confirms a fix with a measured run when the newest red run was measured', async () => {

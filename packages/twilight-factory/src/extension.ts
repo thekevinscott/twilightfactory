@@ -50,7 +50,6 @@ const currentState = async (
     lastMeasuredRun: () => gh.lastMeasuredRun(github, repo),
     head: async () => (headSha = await gh.head(github, repo)),
     openRedIssue: () => gh.openRedIssue(github, repo),
-    blockedPullRequests: async () => (await gh.blockedPullRequests(github, repo)).length,
   };
   const state = await twilightStateMachine(inputs);
   if (state === "GO_PLAIN" || state === "GO_MEASURED") {

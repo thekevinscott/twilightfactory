@@ -1,1 +1,0 @@
-{ "data": { "repository": { "pullRequests": { "nodes": [ { "number": 12, "commits": { "nodes": [ { "commit": { "statusCheckRollup": { "contexts": { "nodes": [ { "conclusion": "FAILURE", "checkSuite": { "workflowRun": { "databaseId": 99, "workflow": { "name": "Main is green" } } } } ] } } } } ] } } ] } } } }

@@ -16,7 +16,6 @@ interface Case {
     lastRun: Run | null;
     lastMeasuredRun: Run | null;
     head: string;
-    blockedPullRequests?: number;
     openRedIssue?: boolean;
   };
   outputs: { state: State; fetched: string[] };
@@ -53,11 +52,6 @@ const cases: Case[] = [
     inputs: { lastRun: run("in_progress", "", 2 * HOURS, "aaa"), lastMeasuredRun: measured25h, head: "bbb" },
     outputs: { state: "STOP", fetched: ["lastRun"] },
   },
-  {
-    name: "a run is in progress, a pull request is blocked",
-    inputs: { lastRun: run("in_progress", "", 30, "aaa"), lastMeasuredRun: measured25h, head: "bbb", blockedPullRequests: 2 },
-    outputs: { state: "STOP", fetched: ["lastRun"] },
-  },
 
   // Red
   {
@@ -85,11 +79,6 @@ const cases: Case[] = [
     inputs: { lastRun: failed(2 * HOURS), lastMeasuredRun: failed(2 * HOURS), head: "bbb" },
     outputs: { state: "FILE_ISSUE", fetched: ["lastRun", "openRedIssue"] },
   },
-  {
-    name: "failed, red issue open, a pull request is blocked",
-    inputs: { lastRun: failed(2 * HOURS), lastMeasuredRun: measured25h, head: "bbb", openRedIssue: true, blockedPullRequests: 2 },
-    outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
-  },
 
   {
     name: "timed out, no red issue",
@@ -102,97 +91,87 @@ const cases: Case[] = [
     outputs: { state: "STOP", fetched: ["lastRun", "openRedIssue"] },
   },
 
-  // Green again, pull requests still blocked
+  // Green again
   {
-    name: "passed 30 minutes ago, a pull request is blocked",
-    inputs: { lastRun: passed(30), lastMeasuredRun: measured25h, head: "bbb", blockedPullRequests: 2 },
-    outputs: { state: "RECHECK_PRS", fetched: ["lastRun", "blockedPullRequests"] },
-  },
-  {
-    name: "passed two hours ago, new commits, a pull request is blocked",
-    inputs: { lastRun: passed2h, lastMeasuredRun: measured25h, head: "bbb", blockedPullRequests: 1 },
-    outputs: { state: "RECHECK_PRS", fetched: ["lastRun", "blockedPullRequests"] },
-  },
-  {
-    name: "passed, red issue still open, nothing blocked",
+    name: "passed, red issue still open",
     inputs: { lastRun: passed(30), lastMeasuredRun: measured25h, head: "bbb", openRedIssue: true },
-    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests"] },
+    outputs: { state: "STOP", fetched: ["lastRun"] },
   },
 
   // Green, waiting
   {
     name: "passed 30 minutes ago, new commits",
     inputs: { lastRun: passed(30), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests"] },
+    outputs: { state: "STOP", fetched: ["lastRun"] },
   },
   {
     name: "passed 59 minutes ago, new commits",
     inputs: { lastRun: passed(59), lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests"] },
+    outputs: { state: "STOP", fetched: ["lastRun"] },
   },
   {
     name: "passed two hours ago, no new commits, measured run overdue",
     inputs: { lastRun: passed2h, lastMeasuredRun: measured25h, head: "aaa" },
-    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "lastMeasuredRun", "head"] },
   },
   {
     name: "passed two days ago, no new commits",
     inputs: { lastRun: passed(48 * HOURS), lastMeasuredRun: passed(48 * HOURS), head: "aaa" },
-    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
+    outputs: { state: "STOP", fetched: ["lastRun", "lastMeasuredRun", "head"] },
   },
 
   // Green, go
   {
     name: "passed two hours ago, new commits, measured two hours ago",
     inputs: { lastRun: passed2h, lastMeasuredRun: measured2h, head: "bbb" },
-    outputs: { state: "GO_PLAIN", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
+    outputs: { state: "GO_PLAIN", fetched: ["lastRun", "lastMeasuredRun", "head"] },
   },
   {
     name: "passed two hours ago, new commits, measured 23 hours ago",
     inputs: { lastRun: passed2h, lastMeasuredRun: passed(23 * HOURS, "yyy"), head: "bbb" },
-    outputs: { state: "GO_PLAIN", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
+    outputs: { state: "GO_PLAIN", fetched: ["lastRun", "lastMeasuredRun", "head"] },
   },
   {
     name: "passed two hours ago, new commits, measured 25 hours ago",
     inputs: { lastRun: passed2h, lastMeasuredRun: measured25h, head: "bbb" },
-    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
+    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun", "head"] },
   },
   {
     name: "passed two hours ago, new commits, never measured",
     inputs: { lastRun: passed2h, lastMeasuredRun: null, head: "bbb" },
-    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun", "head"] },
+    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun", "head"] },
   },
   {
     name: "passed two hours ago, new commits, last measured run failed 25 hours ago",
     inputs: { lastRun: passed2h, lastMeasuredRun: failed(25 * HOURS), head: "bbb" },
-    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun"] },
+    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun"] },
   },
 
   // Green after a fix, but the last measured run did not pass
   {
     name: "fixed 30 minutes ago by a plain run, measured run failed",
     inputs: { lastRun: passed(30), lastMeasuredRun: failed(3 * HOURS), head: "aaa" },
-    outputs: { state: "STOP", fetched: ["lastRun", "blockedPullRequests"] },
+    outputs: { state: "STOP", fetched: ["lastRun"] },
   },
   {
     name: "fixed two hours ago by a plain run, measured run failed, no new commits",
     inputs: { lastRun: passed2h, lastMeasuredRun: failed(3 * HOURS), head: "aaa" },
-    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun"] },
+    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun"] },
   },
   {
     name: "fixed two hours ago by a plain run, measured run failed, new commits",
     inputs: { lastRun: passed2h, lastMeasuredRun: failed(3 * HOURS), head: "bbb" },
-    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun"] },
+    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun"] },
   },
   {
     name: "fixed two hours ago by a plain run, measured run timed out",
     inputs: { lastRun: passed2h, lastMeasuredRun: run("completed", "timed_out", 3 * HOURS, "aaa"), head: "aaa" },
-    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun"] },
+    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun"] },
   },
   {
     name: "passed two hours ago, measured run cancelled",
     inputs: { lastRun: passed2h, lastMeasuredRun: run("completed", "cancelled", 3 * HOURS, "aaa"), head: "aaa" },
-    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "blockedPullRequests", "lastMeasuredRun"] },
+    outputs: { state: "GO_MEASURED", fetched: ["lastRun", "lastMeasuredRun"] },
   },
 
   // Anything but success is red: a job timeout reports as cancelled
@@ -223,7 +202,6 @@ test.for(cases)("$name is $outputs.state", async ({ inputs, outputs }) => {
     lastRun: fetcher("lastRun", inputs.lastRun),
     lastMeasuredRun: fetcher("lastMeasuredRun", inputs.lastMeasuredRun),
     head: fetcher("head", inputs.head),
-    blockedPullRequests: fetcher("blockedPullRequests", inputs.blockedPullRequests ?? 0),
     openRedIssue: fetcher("openRedIssue", inputs.openRedIssue ?? false),
   });
 
@@ -232,7 +210,6 @@ test.for(cases)("$name is $outputs.state", async ({ inputs, outputs }) => {
 
 test.for([
   ["lastRun", passed2h],
-  ["blockedPullRequests", passed2h],
   ["head", passed2h],
   ["lastMeasuredRun", passed2h],
   ["openRedIssue", failed(30)],
@@ -249,7 +226,6 @@ test.for([
       lastRun: fetch("lastRun", lastRun),
       head: fetch("head", "bbb"),
       lastMeasuredRun: fetch("lastMeasuredRun", measured25h),
-      blockedPullRequests: fetch("blockedPullRequests", 0),
       openRedIssue: fetch("openRedIssue", false),
     }),
   ).rejects.toThrow(`could not fetch ${failing}`);

@@ -97,39 +97,6 @@ test.for([
   ]);
 });
 
-test("blockedPullRequests returns pull requests whose main-is-green check failed", async () => {
-  const check = (workflow: string, conclusion: string, databaseId: number) => ({
-    conclusion,
-    checkSuite: { workflowRun: { databaseId, workflow: { name: workflow } } },
-  });
-  const pull = (number: number, checks: unknown[] | null) => ({
-    number,
-    commits: { nodes: [{ commit: { statusCheckRollup: checks && { contexts: { nodes: checks } } } }] },
-  });
-  const { github, requests } = fake({
-    data: {
-      repository: {
-        pullRequests: {
-          nodes: [
-            pull(1, [check(gh.MAIN_IS_GREEN, "FAILURE", 11)]),
-            pull(2, [check(gh.MAIN_IS_GREEN, "SUCCESS", 12)]),
-            pull(3, [check("Lint", "FAILURE", 13)]),
-            pull(4, null),
-            pull(5, [check("Lint", "SUCCESS", 14), check(gh.MAIN_IS_GREEN, "FAILURE", 15)]),
-            pull(6, [{}]),
-          ],
-        },
-      },
-    },
-  });
-  expect(await gh.blockedPullRequests(github, repo)).toEqual([
-    { number: 1, runId: 11 },
-    { number: 5, runId: 15 },
-  ]);
-  expect(requests).toHaveLength(1);
-  expect(requests[0]).toMatchObject({ method: "POST", url: `${api}/graphql`, body: { variables: { owner: "owner", repo: "name" } } });
-});
-
 test.for(["plain", "measured"] as const)("startRun starts a %s run on main", async kind => {
   const { github, requests } = fake(null, 204);
   await gh.startRun(github, repo, kind);
@@ -156,12 +123,6 @@ test("fileIssue opens a red issue pointing at the run", async () => {
       },
     },
   ]);
-});
-
-test("rerunCheck re-runs the failed jobs of a run", async () => {
-  const { github, requests } = fake({}, 201);
-  await gh.rerunCheck(github, repo, 15);
-  expect(requests).toEqual([{ method: "POST", url: `${api}/repos/owner/name/actions/runs/15/rerun-failed-jobs` }]);
 });
 
 test("an API error rejects", async () => {
