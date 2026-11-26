@@ -30,7 +30,7 @@ const main = async () => {
       ...init,
       headers: { authorization: `Bearer ${GH_TOKEN}`, accept: 'application/vnd.github+json' },
     });
-    if (!response.ok) throw new Error(`${init.method ?? 'GET'} ${path}: ${response.status} ${await response.text()}`);
+    if (!response.ok) { throw new Error(`${init.method ?? 'GET'} ${path}: ${response.status} ${await response.text()}`); }
     return response.status === 204 ? null : response.json();
   };
 
@@ -48,6 +48,7 @@ const main = async () => {
   const runs = async query => (await api(`/actions/workflows/${WORKFLOW}/runs?${query}`)).workflow_runs;
   const result = optedIn
     ? decide({ optedIn, ownRun: (await runs(`head_sha=${HEAD_SHA}&per_page=1`))[0] ?? null })
+    // biome-ignore lint/security/noSecrets: a query string, not a secret
     : decide({ optedIn, mainRun: (await runs('branch=main&status=completed&per_page=1'))[0] ?? null });
 
   if (result.dispatch) {
@@ -57,7 +58,7 @@ const main = async () => {
     });
   }
   console.log(result.message);
-  if (!result.pass) process.exitCode = 1;
+  if (!result.pass) { process.exitCode = 1; }
 };
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) await main();
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) { await main(); }

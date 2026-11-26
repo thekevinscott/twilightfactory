@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { setTimeout as sleep } from "node:timers/promises";
 import type { Octokit } from "@octokit/rest";
-import { defineSource, type PollContext } from "./events.js";
+import { type Change, defineSource, type PollContext } from "./events.js";
 
 export interface PullRequest {
   number: number;
@@ -62,7 +63,7 @@ const after = (time: string | null, since: Date) => time !== null && Date.parse(
 // Newest-updated first; stops at the first page that reaches back past `since`, or after one page with no `since`.
 const recent = async ({ get }: PollContext, since: Date | null): Promise<Item[]> => {
   const items: Item[] = [];
-  for (let page = 1; ; page++) {
+  for (let page = 1; ; page += 1) {
     const batch = await get<Item[]>("GET /repos/{owner}/{repo}/pulls", {
       state: "all",
       sort: "updated",
@@ -71,7 +72,7 @@ const recent = async ({ get }: PollContext, since: Date | null): Promise<Item[]>
       page,
     });
     items.push(...batch);
-    if (since === null || batch.length < PER_PAGE || !after(batch.at(-1)!.updated_at, since)) return items;
+    if (since === null || batch.length < PER_PAGE || !after(batch.at(-1)!.updated_at, since)) { return items; }
   }
 };
 
@@ -87,7 +88,7 @@ export const pullRequestOpened = () =>
     },
     poll: async context => {
       const { since } = context;
-      if (since === null) return [];
+      if (since === null) { return []; }
       return (await recent(context, since))
         .filter(item => after(item.created_at, since))
         .map(item => ({ key: openedKey(item), data: pullRequest(item) }));
@@ -103,7 +104,7 @@ export const pullRequestClosed = () =>
     },
     poll: async context => {
       const { since } = context;
-      if (since === null) return [];
+      if (since === null) { return []; }
       return (await recent(context, since))
         .filter(item => after(item.closed_at, since))
         .map(item => ({ key: closedKey(item), data: closed(item) }));
@@ -120,12 +121,13 @@ export const pullRequestEdited = () => {
       changes: ({ payload }) => [{ key: editedKey(payload.pull_request), data: pullRequest(payload.pull_request) }],
     },
     poll: async context => {
-      const changes = [];
-      for (const item of await recent(context, context.since)) {
+      const changes: Change<PullRequest>[] = [];
+      const items = await recent(context, context.since);
+      for (const item of items) {
         const key = editedKey(item);
         const previous = last.get(item.number);
         last.set(item.number, key);
-        if (previous !== undefined && previous !== key) changes.push({ key, data: pullRequest(item) });
+        if (previous !== undefined && previous !== key) { changes.push({ key, data: pullRequest(item) }); }
       }
       return changes;
     },
@@ -146,12 +148,12 @@ export const enableAutoMerge = async (
   github: Octokit,
   { nodeId, draft }: Pick<PullRequest, "nodeId" | "draft">,
 ): Promise<AutoMerge> => {
-  if (draft) return "draft";
+  if (draft) { return "draft"; }
   try {
     await github.graphql(enableAutoMergeMutation, { pullRequestId: nodeId, mergeMethod: "MERGE" });
     return "enabled";
   } catch (error) {
-    if (/already/i.test((error as Error).message)) return "already-enabled";
+    if (/already/i.test((error as Error).message)) { return "already-enabled"; }
     throw error;
   }
 };
@@ -171,27 +173,31 @@ export interface ConflictOptions {
   delay?: number;
 }
 
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 // The list endpoint and webhook payloads omit mergeability, so each candidate is fetched; ETags make unchanged ones free.
 // Keyed by head, so a pull request fires once per push and an agent working on it is not started again.
 // No event says a pull request became conflicted: a push to the default branch or a merge can conflict any open one,
 // a push to a pull request that one. Mergeability reads `unknown` until GitHub computes it, so a webhook reads again.
-export const pullRequestConflicted = ({ retries = 5, delay = 2_000 }: ConflictOptions = {}) => {
+export const pullRequestConflicted = ({ retries = 5, delay = 2000 }: ConflictOptions = {}) => {
   const check = async ({ get }: PollContext, number: number, attempts: number) => {
     let item = await get<Detail>("GET /repos/{owner}/{repo}/pulls/{pull_number}", { pull_number: number });
-    for (let attempt = 0; item.mergeable_state === "unknown" && attempt < attempts; attempt++) {
-      await wait(delay);
+    for (let attempt = 0; item.mergeable_state === "unknown" && attempt < attempts; attempt += 1) {
+      await sleep(delay);
       item = await get<Detail>("GET /repos/{owner}/{repo}/pulls/{pull_number}", { pull_number: number });
     }
-    if (item.draft || item.mergeable_state !== "dirty") return [];
+    if (item.draft || item.mergeable_state !== "dirty") {
+      return [];
+    }
     return [{ key: `${number}:${item.head.sha}`, data: { ...pullRequest(item), headSha: item.head.sha } }];
   };
 
   const checkOpen = async (context: PollContext, attempts: number) => {
     const open = await context.get<Item[]>("GET /repos/{owner}/{repo}/pulls", { state: "open", per_page: PER_PAGE });
-    const changes = [];
-    for (const { number, draft } of open) if (!draft) changes.push(...(await check(context, number, attempts)));
+    const changes: Change<ConflictedPullRequest>[] = [];
+    for (const { number, draft } of open) {
+      if (!draft) {
+        changes.push(...(await check(context, number, attempts)));
+      }
+    }
     return changes;
   };
 
@@ -205,7 +211,9 @@ export const pullRequestConflicted = ({ retries = 5, delay = 2_000 }: ConflictOp
           return ref === `refs/heads/${repository.default_branch}` ? checkOpen(context, retries) : [];
         }
         const { action, pull_request } = webhook.payload;
-        if (action === "closed") return pull_request.merged ? checkOpen(context, retries) : [];
+        if (action === "closed") {
+          return pull_request.merged ? checkOpen(context, retries) : [];
+        }
         return pull_request.draft ? [] : check(context, pull_request.number, retries);
       },
     },

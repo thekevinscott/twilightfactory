@@ -13,10 +13,12 @@ const setup = ({ unknown = {} as Record<number, number> } = {}) => {
   const counts = new Map<number, number>();
   const fetch = async (url: string, init: RequestInit) => {
     const response = await session.fetch(url, init);
-    const number = Number(/\/pulls\/(\d+)$/.exec(new URL(url).pathname)?.[1]);
+    const number = Number(/\/pulls\/(?<number>\d+)$/.exec(new URL(url).pathname)?.groups?.number);
     const count = (counts.get(number) ?? 0) + 1;
     counts.set(number, count);
-    if (count > (unknown[number] ?? 0)) return response;
+    if (count > (unknown[number] ?? 0)) {
+      return response;
+    }
     const body = { ...(await response.json()), mergeable: null, mergeable_state: 'unknown' };
     return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
   };

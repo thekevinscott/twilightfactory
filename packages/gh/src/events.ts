@@ -48,6 +48,7 @@ export type Handler<T = unknown> = (event: GitHubEvent<T>) => unknown;
 export interface EventSourceOptions {
   github: Octokit;
   repo: string;
+  // biome-ignore lint/suspicious/noExplicitAny: sources carry different payload and webhook types
   sources: Source<any, any>[];
   secret?: string;
   interval?: number;
@@ -68,6 +69,7 @@ export const eventSource = ({
   secret,
   interval = 60_000,
   remember = 10_000,
+  // biome-ignore lint/suspicious/noConsole: the default for callers that pass no onError
   onError = error => console.error(error),
 }: EventSourceOptions) => {
   const [owner = "", name = ""] = repo.split("/");
@@ -86,11 +88,12 @@ export const eventSource = ({
   const enqueue = (type: string, via: GitHubEvent["via"], changes: Change[]) => {
     for (const change of changes) {
       const id = `${type}:${change.key}`;
-      if (seen.has(id)) continue;
+      if (seen.has(id)) { continue; }
       seen.set(id, true);
       const event: GitHubEvent = { type, via, ...change };
       void queue.add(async () => {
-        for (const handler of handlers.get(type) ?? []) {
+        const typeHandlers = handlers.get(type) ?? [];
+        for (const handler of typeHandlers) {
           try {
             await handler(event);
           } catch (error) {
@@ -111,16 +114,16 @@ export const eventSource = ({
         ...params,
         headers: cached ? { "if-none-match": cached.etag } : {},
       });
-      if (response.headers.etag) etags.set(id, { etag: response.headers.etag, data: response.data });
+      if (response.headers.etag) { etags.set(id, { etag: response.headers.etag, data: response.data }); }
       return response.data as T;
     } catch (error) {
-      if (cached && (error as { status?: number }).status === 304) return cached.data as T;
+      if (cached && (error as { status?: number }).status === 304) { return cached.data as T; }
       throw error;
     }
   };
 
   const needWebhooks = (method: string) => {
-    if (!webhooks) throw new Error(`${method} needs a webhook secret`);
+    if (!webhooks) { throw new Error(`${method} needs a webhook secret`); }
     return webhooks;
   };
 
@@ -128,11 +131,14 @@ export const eventSource = ({
 
   // An async `changes` is not awaited, so the delivery is acknowledged before its fetches finish; `stop` waits for them.
   for (const source of sources) {
-    if (!webhooks || !source.webhook) continue;
+    if (!(webhooks && source.webhook)) { continue; }
     const { event, changes } = source.webhook;
     webhooks.on(event, webhook => {
       const result = changes(webhook, context(source));
-      if (Array.isArray(result)) return enqueue(source.type, "webhook", result);
+      if (Array.isArray(result)) {
+        enqueue(source.type, "webhook", result);
+        return;
+      }
       const work = result.then(
         found => enqueue(source.type, "webhook", found),
         error => onError(error),
@@ -144,7 +150,7 @@ export const eventSource = ({
 
   const poll = async () => {
     for (const source of sources) {
-      if (!source.poll) continue;
+      if (!source.poll) { continue; }
       const started = new Date();
       try {
         enqueue(source.type, "poll", await source.poll(context(source)));
@@ -157,7 +163,7 @@ export const eventSource = ({
 
   const loop = async () => {
     await poll();
-    if (running) timer = setTimeout(loop, interval);
+    if (running) { timer = setTimeout(loop, interval); }
   };
 
   return {
@@ -177,10 +183,12 @@ export const eventSource = ({
 
     serve: async ({ port = 0, smee: channel }: ServeOptions = {}) => {
       server = createServer(createNodeMiddleware(needWebhooks("serve"), { path: "/" }));
-      await new Promise<void>(resolve => server!.listen(port, "127.0.0.1", resolve));
+      await new Promise<void>(resolve => {
+        server!.listen(port, "127.0.0.1", resolve);
+      });
       const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/`;
       if (channel) {
-        smee = new SmeeClient({ source: channel, target: url, logger: { info: () => {}, error: onError } });
+        smee = new SmeeClient({ source: channel, target: url, logger: { info: () => undefined, error: onError } });
         await smee.start();
       }
       return { url };
@@ -190,7 +198,11 @@ export const eventSource = ({
       running = false;
       clearTimeout(timer);
       await smee?.stop();
-      if (server) await new Promise(resolve => server!.close(resolve));
+      if (server) {
+        await new Promise(resolve => {
+          server!.close(resolve);
+        });
+      }
       await Promise.all(pending);
       await queue.onIdle();
     },

@@ -4,7 +4,13 @@ import type { TerminalFactory } from 'curtaincall/vitest';
 import { launch, startProxy, type Mode } from 'test-proxy';
 import { afterAll } from 'vitest';
 
-type StartOptions = { fixture: string; log?: string; env?: Record<string, string>; cols?: number; cwd?: string };
+interface StartOptions {
+  fixture: string;
+  log?: string;
+  env?: Record<string, string>;
+  cols?: number;
+  cwd?: string;
+}
 
 const cli = ['node', fileURLToPath(new URL('../packages/twilight-factory/dist/cli.js', import.meta.url))];
 

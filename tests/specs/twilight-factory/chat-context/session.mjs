@@ -21,7 +21,7 @@ modelRuntime.registerProvider('faux', {
   apiKey: 'faux',
   baseUrl: 'http://faux.invalid',
   streamSimple: faux.streamSimple,
-  models: [{ id: 'faux', name: 'faux', input: ['text'], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 100000, maxTokens: 1000 }],
+  models: [{ id: 'faux', name: 'faux', input: ['text'], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 100_000, maxTokens: 1000 }],
 });
 
 const resourceLoader = new pi.DefaultResourceLoader({ cwd, agentDir, noExtensions: true, extensionFactories: [tfExtension] });
@@ -44,7 +44,7 @@ await session.prompt('What is going on in this repo?');
 const out = [`TOOLS ${session.getActiveToolNames().filter(name => name.startsWith('tf_')).join(' ')}`];
 out.push(session.messages.find(message => message.sections?.twilight_factory)?.sections.twilight_factory ?? 'NO SECTION');
 for (const message of session.messages) {
-  if (message.role === 'toolResult') out.push(`RESULT ${message.toolName}`, ...message.content.map(part => part.text));
+  if (message.role === 'toolResult') { out.push(`RESULT ${message.toolName}`, ...message.content.map(part => part.text)); }
 }
 console.log(out.join('\n'));
 session.dispose();
