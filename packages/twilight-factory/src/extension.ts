@@ -5,6 +5,7 @@ import * as gh from "twilight-gh";
 import { twilightStateMachine, type Inputs } from "twilight-state-machine";
 import { chatContext } from "./chat-context.js";
 import { stateDisplay } from "./footer.js";
+import { pullRequestPane } from "./pr-pane.js";
 import { registerRedFixer, startRedFixer } from "./red-fixer.js";
 import { appConfigFile, githubToken, NoClientIdError, type Verification } from "./token.js";
 import { removeMergedWorktree } from "./worktrees.js";
@@ -27,22 +28,10 @@ let fixingFor: number | undefined;
 
 type FailedRun = Pick<gh.Run, "id" | "url" | "headSha">;
 
-const currentState = async (
-  cwd: string,
-  onVerification: (verification: Verification) => void,
-  onRed: (run: FailedRun) => Promise<void>,
-): Promise<string> => {
-  let token: string;
-  try {
-    token = await githubToken(onVerification);
-  } catch (error) {
-    if (error instanceof NoClientIdError) return error.message;
-    throw error;
-  }
+const currentState = async (token: string, repo: string, onRed: (run: FailedRun) => Promise<void>): Promise<string> => {
   const github = gh.client(token);
   // Read on every refresh so a broken app config shows in the footer rather than falling back to the user.
   const app = await gh.readAppConfig(appConfigFile());
-  const repo = await githubRepo(cwd);
   let headSha: string | undefined;
   const seen: { lastRun?: gh.Run | null } = {};
   const inputs: Inputs = {
@@ -106,6 +95,7 @@ export default function (pi: ExtensionAPI) {
   let events: gh.EventSource | undefined;
   let redFixer: { dispose(): void } | undefined;
   const display = stateDisplay(pi);
+  const pane = pullRequestPane();
   let state: string | undefined;
   chatContext(pi, { repo: githubRepo, github: async () => gh.client(await githubToken(() => {})), state: () => state });
 
@@ -115,15 +105,27 @@ export default function (pi: ExtensionAPI) {
   };
 
   const show = async (ctx: ExtensionContext) => {
-    let text: string;
+    const showState = (text: string) => {
+      state = text;
+      display.show(text);
+    };
+    let token: string;
+    let repo: string;
     try {
-      text = await currentState(ctx.cwd, signIn(ctx), run => startRedFixer(pi, ctx.cwd, run));
+      token = await githubToken(signIn(ctx));
+      repo = await githubRepo(ctx.cwd);
     } catch (error) {
-      text = `error: ${message(error)}`;
+      ctx.ui.setWidget("tf-sign-in", undefined);
+      showState(error instanceof NoClientIdError ? error.message : `error: ${message(error)}`);
+      return;
     }
     ctx.ui.setWidget("tf-sign-in", undefined);
-    state = text;
-    display.show(text);
+    await Promise.all([
+      currentState(token, repo, run => startRedFixer(pi, ctx.cwd, run)).then(showState, (error: unknown) =>
+        showState(`error: ${message(error)}`),
+      ),
+      gh.recentPullRequests(gh.client(token), repo).then(pane.show, (error: unknown) => pane.fail(message(error))),
+    ]);
   };
 
   pi.on("session_start", async (_event, ctx) => {
@@ -131,6 +133,7 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     display.attach(ctx);
+    pane.attach(ctx);
     redFixer = registerRedFixer(pi);
     void show(ctx);
     timer = setInterval(() => void show(ctx), REFRESH_MS);
@@ -154,5 +157,6 @@ export default function (pi: ExtensionAPI) {
     redFixer = undefined;
     await events?.stop();
     events = undefined;
+    pane.dispose();
   });
 }
