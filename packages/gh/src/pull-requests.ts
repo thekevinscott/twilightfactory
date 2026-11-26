@@ -165,21 +165,51 @@ interface Detail extends Item {
   mergeable_state: string;
 }
 
-// The list endpoint omits mergeability, so each open pull request is fetched; ETags make unchanged ones free.
+export interface ConflictOptions {
+  // Reads after the first while GitHub still reports mergeability as `unknown`, and the wait between them.
+  retries?: number;
+  delay?: number;
+}
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// The list endpoint and webhook payloads omit mergeability, so each candidate is fetched; ETags make unchanged ones free.
 // Keyed by head, so a pull request fires once per push and an agent working on it is not started again.
-// No webhook: GitHub sends no event when a pull request becomes conflicted.
-export const pullRequestConflicted = () =>
-  defineSource({
+// No event says a pull request became conflicted: a push to the default branch or a merge can conflict any open one,
+// a push to a pull request that one. Mergeability reads `unknown` until GitHub computes it, so a webhook reads again.
+export const pullRequestConflicted = ({ retries = 5, delay = 2_000 }: ConflictOptions = {}) => {
+  const check = async ({ get }: PollContext, number: number, attempts: number) => {
+    let item = await get<Detail>("GET /repos/{owner}/{repo}/pulls/{pull_number}", { pull_number: number });
+    for (let attempt = 0; item.mergeable_state === "unknown" && attempt < attempts; attempt++) {
+      await wait(delay);
+      item = await get<Detail>("GET /repos/{owner}/{repo}/pulls/{pull_number}", { pull_number: number });
+    }
+    if (item.draft || item.mergeable_state !== "dirty") return [];
+    return [{ key: `${number}:${item.head.sha}`, data: { ...pullRequest(item), headSha: item.head.sha } }];
+  };
+
+  const checkOpen = async (context: PollContext, attempts: number) => {
+    const open = await context.get<Item[]>("GET /repos/{owner}/{repo}/pulls", { state: "open", per_page: PER_PAGE });
+    const changes = [];
+    for (const { number, draft } of open) if (!draft) changes.push(...(await check(context, number, attempts)));
+    return changes;
+  };
+
+  return defineSource({
     type: "pull_request.conflicted",
-    poll: async ({ get }) => {
-      const open = await get<Item[]>("GET /repos/{owner}/{repo}/pulls", { state: "open", per_page: PER_PAGE });
-      const changes = [];
-      for (const { number, draft } of open) {
-        if (draft) continue;
-        const item = await get<Detail>("GET /repos/{owner}/{repo}/pulls/{pull_number}", { pull_number: number });
-        if (item.mergeable_state !== "dirty") continue;
-        changes.push({ key: `${number}:${item.head.sha}`, data: { ...pullRequest(item), headSha: item.head.sha } });
-      }
-      return changes;
+    webhook: {
+      event: ["push", "pull_request.closed", "pull_request.opened", "pull_request.synchronize", "pull_request.reopened"],
+      changes: async (webhook, context) => {
+        if (webhook.name === "push") {
+          const { ref, repository } = webhook.payload;
+          return ref === `refs/heads/${repository.default_branch}` ? checkOpen(context, retries) : [];
+        }
+        const { action, pull_request } = webhook.payload;
+        if (action === "closed") return pull_request.merged ? checkOpen(context, retries) : [];
+        return pull_request.draft ? [] : check(context, pull_request.number, retries);
+      },
     },
+    // The next poll reads an `unknown` pull request again, so a poll does not wait on it.
+    poll: context => checkOpen(context, 0),
   });
+};

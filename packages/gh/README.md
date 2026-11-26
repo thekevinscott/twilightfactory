@@ -35,6 +35,7 @@ await events.stop();                                  // stop polling and servin
 - Dedupe: an event fires once per `type` + `key`. Build the key from the resource (id, plus `updated_at` when updates matter) so webhook and poll produce the same one. The last 10,000 keys are kept in memory (`remember`), so a restart can fire a change again.
 - Polling: `get` sends the last `ETag` back as `If-None-Match`. An unchanged response is a 304, which does not count against the rate limit, and returns the cached data. `since` is when the source's last successful poll started.
 - Webhooks: signatures are checked by [@octokit/webhooks](https://github.com/octokit/webhooks.js) against `secret`. `serve` starts a server on 127.0.0.1 and, given a smee.io channel, forwards its deliveries there with [smee-client](https://github.com/probot/smee-client). The repository needs a webhook pointing at that channel with the same secret. `receive` takes a delivery directly. `secret` is optional: without it the source only polls, and `receive` and `serve` reject.
+- `webhook.changes(event, context)` gets the same context as `poll`, so it can fetch what the payload leaves out. It may be async: the delivery is acknowledged first, and `stop` waits for it.
 
 ### Pull requests
 
@@ -44,3 +45,9 @@ await events.stop();                                  // stop polling and servin
 - Keys: opened `<number>`, closed `<number>:<closed_at>`, edited `<number>:<hash of title, body, base>`.
 - Poll: lists pulls by `updated` and reads opened from `created_at` and closed from `closed_at`, both at or after `since` (less a minute for clock skew). Edited is a change in title, body or base from the last poll.
 - The first poll after `start` fires nothing and records a baseline, so a restart does not replay every pull request. Changes made while nothing was running are missed.
+
+`pullRequestConflicted({ retries, delay })` makes a source of type `pull_request.conflicted` for open pull requests that are not drafts and conflict with their base (`mergeable_state` `dirty`).
+
+- Data: the pull request fields plus `headSha`. Key: `<number>:<head sha>`, so one push fires at most once.
+- Webhooks: a push to the default branch or a merged pull request checks every open pull request; `opened`, `synchronize` and `reopened` check that one. Payloads carry no mergeability, so each check fetches the pull request, reading again up to `retries` times (default 5), `delay` ms apart (default 2000), while it is `unknown`.
+- Poll: fetches every open pull request and does not wait on `unknown`; the next poll reads it again.

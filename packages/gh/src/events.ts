@@ -22,6 +22,7 @@ export interface GitHubEvent<T = unknown> extends Change<T> {
   via: "webhook" | "poll";
 }
 
+// Handed to `poll` and to `webhook.changes`, so a webhook can fetch what its payload leaves out.
 export interface PollContext {
   github: Octokit;
   repo: string;
@@ -33,7 +34,10 @@ export interface PollContext {
 
 export interface Source<T = unknown, E extends EmitterWebhookEventName = EmitterWebhookEventName> {
   type: string;
-  webhook?: { event: E | E[]; changes: (event: EmitterWebhookEvent<E>) => Change<T>[] };
+  webhook?: {
+    event: E | E[];
+    changes: (event: EmitterWebhookEvent<E>, context: PollContext) => Change<T>[] | Promise<Change<T>[]>;
+  };
   poll?: (context: PollContext) => Promise<Change<T>[]>;
 }
 
@@ -77,6 +81,7 @@ export const eventSource = ({
   let running = false;
   let server: Server | undefined;
   let smee: SmeeClient | undefined;
+  const pending = new Set<Promise<void>>();
 
   const enqueue = (type: string, via: GitHubEvent["via"], changes: Change[]) => {
     for (const change of changes) {
@@ -119,10 +124,22 @@ export const eventSource = ({
     return webhooks;
   };
 
+  const context = (source: Source): PollContext => ({ github, repo, since: since.get(source) ?? null, get });
+
+  // An async `changes` is not awaited, so the delivery is acknowledged before its fetches finish; `stop` waits for them.
   for (const source of sources) {
     if (!webhooks || !source.webhook) continue;
     const { event, changes } = source.webhook;
-    webhooks.on(event, webhook => enqueue(source.type, "webhook", changes(webhook)));
+    webhooks.on(event, webhook => {
+      const result = changes(webhook, context(source));
+      if (Array.isArray(result)) return enqueue(source.type, "webhook", result);
+      const work = result.then(
+        found => enqueue(source.type, "webhook", found),
+        error => onError(error),
+      );
+      pending.add(work);
+      void work.finally(() => pending.delete(work));
+    });
   }
 
   const poll = async () => {
@@ -130,7 +147,7 @@ export const eventSource = ({
       if (!source.poll) continue;
       const started = new Date();
       try {
-        enqueue(source.type, "poll", await source.poll({ github, repo, since: since.get(source) ?? null, get }));
+        enqueue(source.type, "poll", await source.poll(context(source)));
         since.set(source, started);
       } catch (error) {
         onError(error);
@@ -174,6 +191,7 @@ export const eventSource = ({
       clearTimeout(timer);
       await smee?.stop();
       if (server) await new Promise(resolve => server!.close(resolve));
+      await Promise.all(pending);
       await queue.onIdle();
     },
   };
