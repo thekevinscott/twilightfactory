@@ -11,7 +11,7 @@ Kevin's words, from his notes:
 - "The world I'm asking for is one of purely agentic engineering where I barely read the codebase. For that to work, all these things need to be super visible and measurable."
 - The bottlenecks were review and CI. "I never want to be the bottleneck. That's why I want to sculpt via test."
 - "I think a better strategy is to merge by default, with no CI. Assume that bugs will merge and fix them after the fact." And: "Run CI on a timer (once an hour)."
-- "the whole point of this repo is not to have required checks". Pull requests merge as soon as they are opened. `main` is guarded by tf's state machine after the fact, not by branch protection before it.
+- "the whole point of this repo is not to have required checks". Pull requests do not wait for their own test run; they merge as soon as they are opened. `main` is guarded by tf's state machine after the fact. The one required check, "Main is green", only stops merges while `main` is red. Reading the quote as "no required test runs" rather than "no required checks at all" is (unconfirmed).
 - "An issue ideally should not last more than a day."
 - "red should only be triggered specifically on tests failing, not infra". And: "If it is noisy then it's flaky."
 - "let's keep it super light weight to begin with. No linting, nothing but black box integration tests." Lint has since been added: Biome, every rule on, in a pre-commit hook and in CI.
@@ -24,7 +24,7 @@ Kevin's words, from his notes:
 
 Points not written down anywhere:
 
-- Tests carry Kevin's intent, so agents should not weaken a test to make it pass. `CODEOWNERS` names Kevin as owner of `/tests/`. Whether that is enforced, given there are no required checks, is open. (unconfirmed)
+- Tests carry Kevin's intent, so agents should not weaken a test to make it pass. (unconfirmed as a stated rule.) `CODEOWNERS` names Kevin as owner of `/tests/` and `.github/CODEOWNERS`, and the branch ruleset requires code owner review, so a pull request that touches those paths waits for his approval.
 - One tf runs per repository, from the main checkout. (unconfirmed as a rule; the planning notes say "There will never be two tf instances.")
 
 ## How it works
@@ -82,7 +82,7 @@ tf watches pull requests through an event source (`packages/gh/src/events.ts`). 
 ### GitHub workflows
 
 - `tests.yml`: lint, then the full test suite in Docker. Started by hand only (`workflow_dispatch`), with `kind` plain or measured.
-- `main-is-green.yml`: a check on each pull request that fails while `main` is red. A pull request labeled `run-ci` is judged by its own `tests.yml` run instead. It is not a required check.
+- `main-is-green.yml`: a check on each pull request that fails while `main` is red. A pull request labeled `run-ci` is judged by its own `tests.yml` run instead. It is the only required check on `main`.
 - `recheck-blocked.yml` and `recheck-run-ci.yml`: when a tests run finishes, re-run the failed "Main is green" checks so they pick up the new result.
 
 ## Rules agents follow
@@ -91,7 +91,7 @@ From `AGENTS.md`, which is the authority if the two differ.
 
 - Red/green TDD. Write the failing test first. Run only that test locally and watch it fail for the reason you expect. Then write the code and push. Never run the full suite locally: CI is the source of truth, and speed and memory numbers are only accurate there. Lint and typecheck locally are fine.
 - Lint runs in a pre-commit hook. Never skip it. Turn a rule off in `biome.jsonc` with a one-line reason, or for one site with `// biome-ignore`.
-- Pull requests merge right away. There are no required checks, on purpose. Open a pull request when the work is ready, and it merges. Turn on auto-merge with `gh pr merge <number> --auto --merge` if tf has not. Open a draft only for work that is not ready, such as work waiting on Kevin's review.
+- Pull requests merge right away. They do not wait for their own test run, on purpose. Open a pull request when the work is ready, and it merges unless `main` is red or it touches a path Kevin owns. Turn on auto-merge with `gh pr merge <number> --auto --merge` if tf has not. Open a draft only for work that is not ready, such as work waiting on Kevin's review.
 - You may dispatch `tests.yml` on your own branch. Never on `main`: those runs belong to the state machine.
 - Do not change the state machine without Kevin's explicit approval. Propose it in an issue and wait.
 - When Kevin raises a bug, request, idea or follow-up, file a GitHub issue right away, with his words in the body. One concern per issue.
@@ -104,6 +104,6 @@ From `AGENTS.md`, which is the authority if the two differ.
 - `packages/gh`: every GitHub call, and the event source for webhooks and polling.
 - `packages/test-proxy`: an HTTPS proxy that records and replays network traffic for tests.
 - `tests/specs`: the black-box test suite. `tests/fixtures` holds recorded GitHub answers. `tests/docker` holds the container the tests run in, with no network in replay mode.
-- `.github/workflows`: the workflows above. `.github/CODEOWNERS`: Kevin owns `/tests/`.
+- `.github/workflows`: the workflows above. `.github/CODEOWNERS`: Kevin owns `/tests/` and the CODEOWNERS file.
 - `AGENTS.md`: the rules for agents.
 - `~/.config/twilightfactory/`: the GitHub token and the optional GitHub App config.
